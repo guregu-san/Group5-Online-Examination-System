@@ -58,15 +58,15 @@ def exam_search():
         cur.execute("SELECT exam_id FROM exams WHERE exam_id=?", (exam_id,))
         row = cur.fetchone()
         conn.close()
-        
+
         if not row:
             form.examID.errors = ("Exam not found.",)
             return render_template('exam_search.html', form=form)
-        
+
         # Store exam_id in session as a cookie
         session['exam_id'] = row['exam_id']
         return redirect(url_for('takeExamBp.exam_initialization'))
-        
+
     return render_template('exam_search.html', form=form)
 
 # Show exam info and prompt to start
@@ -75,7 +75,7 @@ def exam_initialization():
     exam_id = session.get('exam_id')
     if not exam_id:
         return redirect(url_for('takeExamBp.exam_search'))
-    
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
@@ -84,15 +84,15 @@ def exam_initialization():
     """, (exam_id,))
     exam = cur.fetchone()
     conn.close()
-    
+
     if not exam:
         session.pop('exam_id', None)
         return redirect(url_for('takeExamBp.exam_search'))
-    
+
     form = ExamInitializationForm()
     if form.validate_on_submit():
         return redirect(url_for('takeExamBp.start'))
-        
+
     return render_template('exam_initialization.html', form=form, exam=row_to_dict(exam))
 
 # Show exam questions
@@ -101,10 +101,10 @@ def start():
     exam_id = session.get('exam_id')
     if not exam_id:
         return redirect(url_for('takeExamBp.exam_search'))
-    
+
     conn = get_db()
     cur = conn.cursor()
-    
+
     # Fetch exam
     cur.execute("SELECT exam_id, title, time_limit FROM exams WHERE exam_id=?", (exam_id,))
     exam = cur.fetchone()
@@ -112,7 +112,7 @@ def start():
         session.pop('exam_id', None)
         conn.close()
         return redirect(url_for('takeExamBp.exam_search'))
-    
+
     # Fetch exam questions
     cur.execute("""
         SELECT question_id, question_text, is_multiple_correct, points, order_index
@@ -120,7 +120,7 @@ def start():
         ORDER BY order_index ASC
     """, (exam_id,))
     questions = cur.fetchall()
-    
+
     # Fetch options for each question
     questions_with_options = [] # 2D structure because each question has multiple options
     for q in questions:
@@ -132,9 +132,9 @@ def start():
         q_dict = row_to_dict(q)
         q_dict['options'] = [row_to_dict(o) for o in options]
         questions_with_options.append(q_dict)
-    
+
     conn.close()
-    
+
     form = SubmissionForm()
 
     # Populate the dynamic form with questions
@@ -143,11 +143,11 @@ def start():
         # Append new question subform if needed
         if i >= len(form.questions):
             form.questions.append_entry()
-        
+
         subform = form.questions[i]
         subform.question_id.data = q['question_id']
         choices = [(int(opt['option_id']), opt['option_text']) for opt in q['options']]
-        
+
         if q['is_multiple_correct']:
             subform.single_or_multi.data = 'multi'
             subform.answer_multi.choices = choices
@@ -156,7 +156,7 @@ def start():
             subform.answer_single.choices = choices
 
         print ("Added question", q['question_id'], "with choices", choices)
-    
+
     if form.validate_on_submit():
         # Collect answers
         answers = {}
@@ -168,9 +168,9 @@ def start():
                 answers[qid] = subform.answer_multi.data
             else:
                 answers[qid] = subform.answer_single.data
-        
+
         print("Collected answers:", answers)
         # TODO: calculate score and store submission in DB
         return jsonify(message="Exam submitted", answers=answers), 200
-    
+
     return render_template('submission.html', form=form, exam=row_to_dict(exam), questions=questions_with_options)
