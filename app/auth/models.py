@@ -1,3 +1,4 @@
+'''
 from app import db
 from flask_login import UserMixin
 
@@ -23,3 +24,4 @@ class Instructors(db.Model, UserMixin):
 
     def get_id(self):
         return f"instructor-{self.instructor_id}"
+'''

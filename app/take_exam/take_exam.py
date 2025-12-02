@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
 
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
+from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
 
 takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  template_folder="templates")
 

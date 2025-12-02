@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_bootstrap import Bootstrap
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from app.auth.form import LoginForm, RegisterForm, bcrypt
-from app.auth.models import db, Students, Instructors
+from app.models import db, Students, Instructors
+#from app.auth.models import db, Students, Instructors
 
 authBp = Blueprint("authBp", __name__, template_folder="templates")
 

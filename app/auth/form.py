@@ -2,7 +2,8 @@ from app import app
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, RadioField
 from wtforms.validators import InputRequired, Length, ValidationError, Optional, Email
-from app.auth.models import Students, Instructors
+#from app.auth.models import Students, Instructors
+from app.models import Students, Instructors
 from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt(app)
@@ -16,7 +17,7 @@ class LoginForm(FlaskForm):
 
     submit = SubmitField('Login')
 
-    
+
 
     def validate_email(self, email):
         user = Students.query.filter_by(email=email.data).first()
@@ -29,13 +30,13 @@ class LoginForm(FlaskForm):
         user = Students.query.filter_by(email=self.email.data).first()
         if not user:
             user = Instructors.query.filter_by(email=self.email.data).first()
-        
+
         if user and not bcrypt.check_password_hash(user.password_hash, password.data):
             raise_error()
-        
 
-        
-    
+
+
+
 
 
 class RegisterForm(FlaskForm):
@@ -45,7 +46,7 @@ class RegisterForm(FlaskForm):
     roll_number = StringField(validators=[Optional()], render_kw={"placeholder": "Roll Number"})
     name = StringField(validators=[Optional(), Length(min=2, max=50)], render_kw={"placeholder": "Name"})
     contact_number = StringField(validators=[Optional(), Length(min=10, max=15)], render_kw={"placeholder": "Contact Number"})
-    
+
     submit = SubmitField('Register')
 
     def validate_roll_number(self, roll_number):
@@ -60,6 +61,6 @@ class RegisterForm(FlaskForm):
             existing_user_email = Students.query.filter_by(email=email.data).first()
         else:
             existing_user_email = Instructors.query.filter_by(email=email.data).first()
-        
+
         if existing_user_email:
             raise ValidationError("That email address is already in use. Please choose a different one.")
