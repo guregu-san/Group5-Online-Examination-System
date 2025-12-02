@@ -39,7 +39,7 @@ class Exams(db.Model):
     course_code = db.Column(db.String(50), db.ForeignKey("courses.course_code"))
     title = db.Column(db.String(100), nullable=False)
     time_limit = db.Column(db.Integer, nullable=True)
-    security_settings = db.Column(db.Text, nullable=False)
+    security_settings = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     updated_at = db.Column(db.DateTime)
 
@@ -68,6 +68,6 @@ class Submissions(db.Model):
     submitted_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
     feedback = db.Column(db.Text)
-    status = db.Column(Enum("IN_PROFRESS", "SUBMITTED", "IN_REVIEW", "REVIEWED"), nullable=False)
-    answers = db.Column(db.Text)
+    status = db.Column(Enum("IN_PROGRESS", "SUBMITTED", "IN_REVIEW", "REVIEWED"), nullable=False)
+    answers = db.Column(db.JSON)
     total_score = db.Column(db.Integer)
