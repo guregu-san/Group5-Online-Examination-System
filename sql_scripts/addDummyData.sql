@@ -30,10 +30,10 @@ VALUES
 -- Exams
 INSERT INTO exams (instructor_email, course_code, title, time_limit, security_settings, created_at, updated_at)
 VALUES
-    ('teacher@uni.com', 'CS101', 'Midterm Exam v2', 100, '{"password":'', "shuffle":true, "single_session":false, "no_tab_switching":false}', '2025-01-01 10:00:00', '2025-01-01 10:05:00'),
-    ('joe@example.com', NULL, 'Sample Exam', 30, '{"password":"111", "shuffle":false, , "single_session":true, "no_tab_switching":false}}', '2025-01-01 12:00:00', NULL),
-    ('alice.johnson@univ.edu', 'CS102', 'Midterm Exam', 60, '{"password":"1234", "shuffle":true, , "single_session":true, "no_tab_switching":true}}', '2025-01-01 11:00:00', NULL),
-    ('bob.smith@univ.edu', 'CS103', 'Final Exam', 90, '{"password":"121212", "shuffle":false, , "single_session":false, "no_tab_switching":true}', '2025-01-01 10:11:00', '2025-01-01 10:12:00');
+    ('teacher@uni.com', 'CS101', 'Midterm Exam v2', 100, '{"password": "", "shuffle": true, "single_session": false, "no_tab_switching": false}', '2025-01-01 10:00:00', '2025-01-01 10:05:00'),
+    ('joe@example.com', NULL, 'Sample Exam', 30, '{"password": "111", "shuffle": false, "single_session": true, "no_tab_switching": false}', '2025-01-01 12:00:00', NULL),
+    ('alice.johnson@univ.edu', 'CS102', 'Midterm Exam', 60, '{"password": "1234", "shuffle": true, "single_session": true, "no_tab_switching": true}', '2025-01-01 11:00:00', NULL),
+    ('bob.smith@univ.edu', 'CS103', 'Final Exam', 90, '{"password": "121212", "shuffle": false, "single_session": false, "no_tab_switching": true}', '2025-01-01 10:11:00', '2025-01-01 10:12:00');
 
 -- Questions
 INSERT INTO questions (exam_id, question_text, is_multiple_correct, points, order_index)
