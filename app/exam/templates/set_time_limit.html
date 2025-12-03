@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Set Time Limit{% endblock %}
+
+{% block main_content %}
+<div class="overlay-card-container">
+  <div class="overlay-card">
+    <h3 class="text-center">Set Time Limit</h3>
+    <p class="text-center">Enter time limit (in minutes):</p>
+
+    <form method="POST" action="">
+      <input type="number"
+             name="time_limit"
+             class="form-control text-center"
+             min="1"
+             value="{{ exam['time_limit'] or '' }}"
+             style="max-width: 120px; margin: 0 auto 20px auto;">
+
+      <div class="text-center">
+        <button type="submit" class="btn btn-primary mr-2">Save</button>
+        <a href="{{ url_for('examBp.edit_exam_ui', exam_id=exam_id) }}" class="btn btn-secondary">Exit</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Exam{% endblock %}
+
+{% block main_content %}
+<div class="card-container">
+  <div class="card text-center">
+
+    <h1>{{ exam['title'] }}</h1>
+
+    <p>Time Limit: {{ exam['time_limit'] if exam['time_limit'] else 'Not set' }} min</p>
+    <p>Security: {{ exam['security_settings'] or 'Not set' }}</p>
+
+    <div class="mt-4 text-left" style="display:inline-block;">
+      {% for q in questions %}
+        <p><strong>{{ q['order_index'] }}.</strong> {{ q['question_text'] }}</p>
+      {% endfor %}
+    </div>
+
+    <div class="mt-4">
+      <a href="{{ url_for('examBp.exam_saved_ui', exam_id=exam_id) }}" class="btn btn-primary mr-2">Save</a>
+      <a href="{{ url_for('examBp.edit_exam_ui', exam_id=exam_id) }}" class="btn btn-secondary">Close</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

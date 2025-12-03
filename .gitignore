@@ -4,3 +4,9 @@
 
 *.pyc
 *.pyo
+__pycache__/
+*.pyc
+.DS_Store
+oesDB.db
+instance/
+oesDB.db
