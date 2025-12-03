@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Manual Grading Dashboard</h3>
+
+  <!-- Instructor email input -->
+  <label class="form-label mt-2" for="instructorEmail">Instructor Email</label>
+  <input
+    id="instructorEmail"
+    class="form-control"
+    type="email"
+    value="teacher@uni.com"
+  />
+
+  <button id="loadDashboardBtn" class="btn btn-primary mt-3">
+    Load Manual Grading
+  </button>
+
+  <!-- Error box -->
+  <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+
+  <!-- Exams list -->
+  <ul id="examsList" class="list-group mt-4">
+    <li class="list-group-item text-center text-muted">
+      No exams loaded yet.
+    </li>
+  </ul>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const emailInput = document.getElementById("instructorEmail");
+    const loadBtn = document.getElementById("loadDashboardBtn");
+    const errorBox = document.getElementById("errorBox");
+    const examsList = document.getElementById("examsList");
+
+    async function loadDashboard() {
+      const email = emailInput.value.trim();
+      if (!email) {
+        errorBox.textContent = "Please enter an instructor email.";
+        errorBox.classList.remove("d-none");
+        return;
+      }
+
+      errorBox.classList.add("d-none");
+      errorBox.textContent = "";
+
+      // Show temporary loading item
+      examsList.innerHTML =
+        '<li class="list-group-item text-center">Loading...</li>';
+
+      const url =
+        "http://localhost:5000/grading/dashboard/" +
+        encodeURIComponent(email);
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+
+        const exams = await res.json();
+
+        examsList.innerHTML = "";
+
+        if (!Array.isArray(exams) || exams.length === 0) {
+          examsList.innerHTML =
+            '<li class="list-group-item text-center text-muted">No exams found for this instructor.</li>';
+          return;
+        }
+
+        exams.forEach((exam) => {
+          const li = document.createElement("li");
+          li.className =
+            "list-group-item d-flex justify-content-between align-items-center";
+          li.innerHTML = `
+            <div>
+              <strong>${exam.title}</strong> — ${exam.course_code}
+              <div class="small text-muted">
+                Total: ${exam.total_submissions} |
+                In review: ${exam.in_review} |
+                Graded: ${exam.graded}
+              </div>
+            </div>
+            <a class="btn btn-sm btn-outline-primary"
+               href="/instructor/grading/exams/${exam.exam_id}/submissions">
+              View Submissions
+            </a>
+          `;
+          examsList.appendChild(li);
+        });
+      } catch (err) {
+        console.error(err);
+        errorBox.textContent = "Failed to load manual grading dashboard";
+        errorBox.classList.remove("d-none");
+        examsList.innerHTML =
+          '<li class="list-group-item text-center text-muted">Error loading exams.</li>';
+      }
+    }
+
+    // Button click
+    loadBtn.addEventListener("click", loadDashboard);
+
+    // Initial load, like useEffect([]) in React
+    loadDashboard();
+  });
+</script>
+{% endblock %}
