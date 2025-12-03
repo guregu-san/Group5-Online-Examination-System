@@ -10,3 +10,4 @@ __pycache__/
 oesDB.db
 instance/
 oesDB.db
+.env
