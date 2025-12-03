@@ -10,7 +10,7 @@ from wtforms import (
     RadioField,
     SelectMultipleField,
 )
-from wtforms.validators import InputRequired, Length
+from wtforms.validators import InputRequired, Length, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 
 
@@ -42,11 +42,11 @@ class QuestionAnswerForm(Form):
     question_id = HiddenField()
     single_or_multi = HiddenField()
 
-    answer_single = RadioField(choices=[], coerce=int)
-    answer_multi = MultiCheckboxField(choices=[], coerce=int)
+    answer_single = RadioField(choices=[], coerce=int, validators=[Optional()]) #Might have to change coerce
+    answer_multi = MultiCheckboxField(choices=[], coerce=int, validators=[Optional()])
 
 class SubmissionForm(FlaskForm):
     """Top-level submission form with a dynamic list of questions."""
-    questions = FieldList(FormField(QuestionAnswerForm), min_entries=0)
+    questions = FieldList(FormField(QuestionAnswerForm), min_entries=1)
 
     submit = SubmitField('Submit')

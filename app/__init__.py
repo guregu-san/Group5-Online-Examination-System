@@ -44,10 +44,12 @@ def internal_server_error(e):
 from app import home
 from app.auth.auth import authBp
 from app.exam.exam import examBp
-from .take_exam import take_exam
+from .take_exam.take_exam import takeExamBp
 from .view_exams import exam_viewBp
+from .exam_create import exam_createBp
 
 app.register_blueprint(authBp)
 app.register_blueprint(examBp)
-app.register_blueprint(take_exam.takeExamBp)
+app.register_blueprint(takeExamBp)
 app.register_blueprint(exam_viewBp)
+app.register_blueprint(exam_createBp)

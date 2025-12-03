@@ -1,16 +1,16 @@
 CREATE TABLE IF NOT EXISTS instructors (
     instructor_id INTEGER PRIMARY KEY,
-    name TEXT,
-    email TEXT UNIQUE,
-    password_hash TEXT
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS students (
     roll_number INTEGER PRIMARY KEY,
-    name TEXT,
-    email TEXT UNIQUE,
-    password_hash TEXT,
-    contact_number INTEGER
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    contact_number INTEGER UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS courses (
@@ -22,15 +22,15 @@ CREATE TABLE IF NOT EXISTS courses (
 
 CREATE TABLE IF NOT EXISTS exams (
     exam_id INTEGER PRIMARY KEY,
-    course_code INTEGER,
-    instructor_email TEXT,
-    title TEXT,
+    instructor_email TEXT NOT NULL,
+    course_code TEXT,
+    title TEXT NOT NULL,
     time_limit INTEGER,
-    security_settings TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    security_settings TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (course_code) REFERENCES courses(course_code),
-    FOREIGN KEY (instructor_email) REFERENCES instructors(email)
+    FOREIGN KEY (instructor_email) REFERENCES instructors(email),
+    FOREIGN KEY (course_code) REFERENCES courses(course_code)
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS options (
 CREATE TABLE IF NOT EXISTS submissions (
     submission_id INTEGER PRIMARY KEY,
     exam_id INTEGER NOT NULL,
-    roll_number TEXT NOT NULL,
-    started_at DATETIME,
+    roll_number INT NOT NULL,
+    started_at DATETIME NOT NULL,
     submitted_at DATETIME,
     updated_at DATETIME,
     feedback TEXT,
-    status TEXT CHECK (status IN ('IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'GRADED')),
+    status TEXT CHECK (status IN ('IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'REVIEWED')) NOT NULL,
     answers TEXT,
     total_score INTEGER,
     FOREIGN KEY (exam_id) REFERENCES exams (exam_id),

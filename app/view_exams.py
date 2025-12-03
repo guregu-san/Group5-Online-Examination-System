@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from flask import Blueprint, request, jsonify, render_template
+from flask_login import current_user
 #from app import app
 
 
@@ -22,23 +23,33 @@ exam_viewBp = Blueprint('exam_view', __name__, template_folder='templates')
 # U6-F1: List completed exams (results) for a student
 @exam_viewBp.route('/results', methods=['GET'])
 def list_results():
-    # TODO: fetch roll_number from session/login later!!!!!!
+    # Prefer current user when available:
+    # - Students should only see their own results (use current_user.roll_number)
+    # - Instructors will see results for exams they own (filtered by instructor_email) when not providing a roll_number
     roll_number = request.args.get('roll_number')
     course_code = request.args.get('course_code')
     instructor_name = request.args.get('instructor')
 
-    if not roll_number:
-        # temporary error message – in practice, user should be logged in
+    # If a logged-in student is requesting results, always use their roll_number
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "Student":
+        roll_number = getattr(current_user, "roll_number", roll_number)
+
+    # If not a logged-in instructor and no roll_number available, require it
+    if not roll_number and not (
+        current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor"
+    ):
         return "roll_number query parameter is required for now", 400
 
     conn = get_db()
     cur = conn.cursor()
 
-    query = """
+    # Build SQL based on whether the current user is an instructor or we have a roll_number
+    base_select = """
         SELECT
             s.submission_id,
             s.exam_id,
             s.total_score,
+            (SELECT COALESCE(SUM(points),0) FROM questions q WHERE q.exam_id = e.exam_id) AS total_points,
             s.status,
             s.submitted_at,
             e.title,
@@ -50,14 +61,22 @@ def list_results():
         JOIN exams e ON e.exam_id = s.exam_id
         JOIN courses c ON c.course_code = e.course_code
         JOIN instructors i ON i.email = e.instructor_email
-        WHERE s.roll_number = ?
-          AND s.status IN ('SUBMITTED', 'GRADED')
     """
-    params = [roll_number]
+
+    params = []
+
+    # If the user is an instructor and no roll_number was supplied, return submissions for exams they own
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor" and not roll_number:
+        query = base_select + " WHERE e.instructor_email = ? AND s.status IN ('SUBMITTED', 'GRADED')"
+        params = [current_user.email]
+    else:
+        # For students or when roll_number is supplied, show only that student's results
+        query = base_select + " WHERE s.roll_number = ? AND s.status IN ('SUBMITTED', 'GRADED')"
+        params = [roll_number]
 
     if course_code:
-        query += " AND e.course_code = ?"
-        params.append(course_code)
+        query += " AND e.course_code LIKE ?"
+        params.append(f"%{course_code}%")
 
     if instructor_name:
         query += " AND i.name LIKE ?"
@@ -67,9 +86,9 @@ def list_results():
 
     cur.execute(query, params)
     rows = cur.fetchall()
-    conn.close()
-
+    # convert rows to dicts
     results = [row_to_dict(r) for r in rows]
+    conn.close()
 
     # HTML-view
     return render_template(
@@ -143,6 +162,20 @@ def view_result_detail(submission_id):
     answers_json = sub["answers"] or "{}"
     answers = json.loads(answers_json)
 
+    # answers may be in two shapes:
+    # - dict mapping str(question_id) -> selected option id(s) (from take_exam)
+    # - list of answer dicts (from manual grading) where each entry may include
+    #   question_id, auto_points, manual_points, final_points, max_points, answer_text
+    is_answers_map = isinstance(answers, dict)
+    answers_by_q = {}
+    if not is_answers_map and isinstance(answers, list):
+        for a in answers:
+            try:
+                qid = int(a.get("question_id"))
+            except Exception:
+                continue
+            answers_by_q[qid] = a
+
     # if not graded, show message
     if status != "GRADED":
         conn.close()
@@ -187,13 +220,64 @@ def view_result_detail(submission_id):
 
     # highlight selected answers
     for qid, qdata in questions.items():
-        selected_ids = answers.get(str(qid), [])
+        if is_answers_map:
+            selected_ids = answers.get(str(qid), [])
+        else:
+            # try to find selected IDs in the structured answers (if present)
+            entry = answers_by_q.get(qid)
+            # possible keys: 'selected', 'selected_option_ids', 'answer' or nothing
+            if entry is None:
+                selected_ids = []
+            else:
+                # common shapes: list of ints, single int, or comma-separated string
+                if isinstance(entry.get('selected_option_ids'), list):
+                    selected_ids = entry.get('selected_option_ids')
+                elif isinstance(entry.get('selected'), list):
+                    selected_ids = entry.get('selected')
+                elif isinstance(entry.get('answer'), list):
+                    selected_ids = entry.get('answer')
+                elif isinstance(entry.get('answer'), int):
+                    selected_ids = [entry.get('answer')]
+                else:
+                    # fallback: student answer text not useful for MCQ selection
+                    selected_ids = []
         if isinstance(selected_ids, int):
             selected_ids = [selected_ids]
         selected_ids = set(map(int, selected_ids)) if selected_ids else set()
 
         for opt in qdata["options"]:
             opt["selected_by_student"] = opt["option_id"] in selected_ids
+
+        # determine earned points
+        # If manual grading data exists for this question, prefer final_points/manual_points/auto_points
+        entry = answers_by_q.get(qid) if not is_answers_map else None
+        if entry is not None:
+            final_p = entry.get('final_points')
+            manual_p = entry.get('manual_points')
+            auto_p = entry.get('auto_points')
+            if final_p is not None:
+                qdata['earned_points'] = float(final_p)
+            elif manual_p is not None:
+                qdata['earned_points'] = float(manual_p)
+            elif auto_p is not None:
+                qdata['earned_points'] = float(auto_p)
+            else:
+                # fallback to auto evaluation from selected ids when possible
+                correct_ids = {o['option_id'] for o in qdata['options'] if o.get('is_correct')}
+                if correct_ids and selected_ids == correct_ids:
+                    qdata['earned_points'] = qdata['points']
+                else:
+                    qdata['earned_points'] = 0
+        else:
+            # no manual grading data, compute auto-earned by exact-match of selected ids
+            correct_ids = {o['option_id'] for o in qdata['options'] if o.get('is_correct')}
+            if correct_ids and selected_ids == correct_ids:
+                qdata['earned_points'] = qdata['points']
+            else:
+                qdata['earned_points'] = 0
+
+    # compute total possible points for the exam
+    total_possible = sum(q['points'] for q in questions.values())
 
     exam_info = {
         "title": sub["title"],
@@ -206,6 +290,7 @@ def view_result_detail(submission_id):
         exam=exam_info,
         questions=list(questions.values()),
         total_score=total_score,
+        total_possible=total_possible,
         message=None
     )
 

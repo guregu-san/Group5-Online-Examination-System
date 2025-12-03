@@ -6,15 +6,32 @@
 
 {%block main_content%}
 <div class="card-container">
-    <div class="card"> 
-        <h1>Exam Title</h1>
-        <p>blah blah blah</p>
+    <div class="card">
+        <h1>{{ exam.title }}</h1>
+        <h4>
+            Instructor: <p>{{ instructor_name }}</p><br>
+            Time Limit: <p>{{ exam.time_limit }} minutes</p><br>
+            Security Settings:<br>
+            <p>
+            {% if exam.security_settings.shuffle %}
+                - Randomized question order<br>
+            {% endif %}
+            {% if exam.security_settings.single_session %}
+                - Single session only<br>
+            {% endif %}
+            {% if exam.security_settings.no_tab_switching %}
+                - No tab switching allowed<br>
+            {% endif %}
+            </p>
+        </h4>
         <form method="POST" action="">
             {{ form.hidden_tag() }}
-            {{ form.password }}
-            {{ form.submit }}
+            {% if exam.security_settings.password != '' %}
+                {{ form.password }}<br>
+            {% endif %}
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('takeExamBp.exam_search') }}" class="btn btn-danger">Cancel</a>
         </form>
-        <a href="{{ url_for('takeExamBp.exam_search') }}" class=".form-row">Cancel</a>
     </div>
 </div>
 {%endblock%}

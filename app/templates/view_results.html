@@ -2,14 +2,15 @@
 {% import "bootstrap/wtf.html" as wtf %}
 
 
-{%block title%} My Exam Results {%endblock%}
+{%block title%} Exams {%endblock%}
 
 
 {%block main_content%}
+<div class="card-container">
+    <div class="card wide">
+        <h1>Exams</h1>
 
-<h2>Completed Exams</h2>
-
-<div class="filter-box">
+        <div class="filter-box">
     <form method="get">
         <input type="hidden" name="roll_number" value="{{ roll_number }}">
 
@@ -21,9 +22,10 @@
 
         <button type="submit">Search</button>
     </form>
-</div>
+        </div>
 
-<table>
+        <div style="overflow-x:auto; margin-top: 12px;">
+            <table>
     <tr>
         <th>Exam Title</th>
         <th>Course</th>
@@ -39,14 +41,25 @@
         <td>{{ r.course_code }}</td>
         <td>{{ r.instructor_name }}</td>
         <td>{{ r.status }}</td>
-        <td>{% if r.total_score != None %}{{ r.total_score }}{% else %}-{% endif %}</td>
+        <td>
+            {% set total = r.total_points if r.total_points is not none else 0 %}
+            {% if r.total_score is not none %}
+                {{ r.total_score }} / {{ total }}
+            {% else %}
+                - / {{ total }}
+            {% endif %}
+        </td>
         <td>
             <a href="/results/{{ r.submission_id }}?roll_number={{ roll_number }}">
                 View Result
             </a>
         </td>
     </tr>
-    {% endfor %}
-</table>
+        {% endfor %}
+                </table>
+            </div>
+
+        </div>
+    </div>
 
 {%endblock%}

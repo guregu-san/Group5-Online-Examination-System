@@ -40,11 +40,16 @@
         <div class="col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
                 <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                <li><a href="{{ url_for('takeExamBp.exam_search') }}">Take Exam</a></li>
+                <li><a href="{{ url_for('exam_view.list_results', roll_number=1) }}"> View Exams </a></li>
+                    
+                {#only visible to instructors#}
+                {% if current_user.role == 'Instructor' %}
+                    <li><a href="{{ url_for('exam_create.create') }}">Create Exam</a></li>
+                {% endif %}
 
                 {#only visible to students#}
                 {% if current_user.role == 'Student' %}
-                    <li><a href="{{ url_for('exam_view.list_results', roll_number=1) }}"> View results </a></li>
+                    <li><a href="{{ url_for('takeExamBp.exam_search') }}">Take Exam</a></li>
                 {% endif %}
             </ul>
         </div>

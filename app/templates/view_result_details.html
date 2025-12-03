@@ -7,40 +7,46 @@
 
 {%block main_content%}
 
-{% if message %}
-    <h2 class="not-graded">{{ message }}</h2>
-    <a href="/results?roll_number={{ request.args.get('roll_number') }}">Back</a>
-{% else %}
+<div class="card-container">
+    <div class="card wide">
+        {% if message %}
+            <h2 class="not-graded">{{ message }}</h2>
+            <a href="/results?roll_number={{ request.args.get('roll_number') }}">Back</a>
+        {% else %}
 
-<h2>{{ exam.title }} ({{ exam.course_code }})</h2>
-<p><strong>Total Score:</strong> {{ total_score }}</p>
+            <h1>{{ exam.title }} <small>({{ exam.course_code }})</small></h1>
+            {% set total_possible = total_possible if total_possible is defined else 0 %}
+            <p><strong>Total Score:</strong> {% if total_score is not none %}{{ total_score }} / {{ total_possible }}{% else %}- / {{ total_possible }}{% endif %}</p>
 
-<hr>
+            <hr>
 
-{% for q in questions %}
-<div class="question-box">
-    <h3>Q{{ loop.index }}: {{ q.question_text }}</h3>
+            {% for q in questions %}
+                <div class="question-box">
+                    <h3>Q{{ loop.index }}: {{ q.question_text }}</h3>
+                    <p><strong>Points:</strong> {{ q.earned_points }} / {{ q.points }}</p>
 
-    {% for opt in q.options %}
-        <div class="option">
-            {% if opt.selected_by_student %}
-                <span class="selected">✔ {{ opt.option_text }}</span>
-            {% else %}
-                {{ opt.option_text }}
-            {% endif %}
+                    {% for opt in q.options %}
+                        <div class="option">
+                            {% if opt.selected_by_student %}
+                                <span class="selected">✔ {{ opt.option_text }}</span>
+                            {% else %}
+                                {{ opt.option_text }}
+                            {% endif %}
 
-            {% if opt.is_correct %}
-                <span class="correct"> (correct)</span>
-            {% endif %}
-        </div>
-    {% endfor %}
+                            {% if opt.is_correct %}
+                                <span class="correct"> (correct)</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
 
+                </div>
+            {% endfor %}
+
+            <a href="/results?roll_number={{ request.args.get('roll_number') }}">Back to Results</a>
+
+        {% endif %}
+    </div>
 </div>
-{% endfor %}
-
-<a href="/results?roll_number={{ request.args.get('roll_number') }}">Back to Results</a>
-
-{% endif %}
 
 {%endblock%}
 

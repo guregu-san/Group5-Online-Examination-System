@@ -40,6 +40,12 @@ body {
   text-align: center;
 }
 
+.card.wide {
+  max-width: 1100px;
+  text-align: left;
+  padding: 28px;
+}
+
 .radio-inline {
   display: flex;
 }

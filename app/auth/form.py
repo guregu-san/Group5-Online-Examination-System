@@ -2,7 +2,8 @@ from app import app
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, RadioField
 from wtforms.validators import InputRequired, Length, ValidationError, Optional, Email
-from app.auth.models import Students, Instructors
+#from app.auth.models import Students, Instructors
+from app.models import Students, Instructors
 from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt(app)
