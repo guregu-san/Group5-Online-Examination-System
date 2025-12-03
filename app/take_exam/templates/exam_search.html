@@ -11,9 +11,25 @@
         <form method="POST" action="">
             {{ form.hidden_tag() }}
             {{ form.examID }}
-            {{ form.submit }}
+            {% if form.examID.errors %}
+                <div class="alert alert-warning alert-dismissable" id="auto-fade-alert">
+                    <strong>Exam not found</strong>
+                </div>
+
+                <script>
+                    setTimeout(function() {
+                        let alertBox = document.getElementById("auto-fade-alert");
+                        if (alertBox) {
+                            alertBox.style.transition = "opacity 1s ease";
+                            alertBox.style.opacity = "0";
+                            setTimeout(() => alertBox.remove(), 1000);
+                        }
+                    }, 2500);
+                </script>
+            {% endif %}
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Go Back</a>
         </form>
-        <a href="{{ url_for('dashboard') }}" class=".form-row">Go Back</a>
     </div>
 </div>
 {%endblock%}

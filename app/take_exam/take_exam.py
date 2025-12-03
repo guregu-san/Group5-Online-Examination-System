@@ -1,59 +1,22 @@
 import sqlite3
 import json
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
+from flask_login import login_required, current_user
+from datetime import datetime
 
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
 from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
 
 takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  template_folder="templates")
 
-'''Utility functions'''
-def get_db(): # Connect to the SQLite database
-    conn = sqlite3.connect("oesDB.db")
-    conn.row_factory = sqlite3.Row # Allow row access by column name
-    conn.execute("PRAGMA foreign_keys = ON;")
-
-    return conn
-
-def calculate_score(exam_id, answers_dict):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("SELECT question_id, points FROM questions WHERE exam_id=?", (exam_id,))
-    questions = cur.fetchall()
-
-    total_score = 0
-
-    for q in questions:
-        qid = q["question_id"]
-        key = str(qid)
-
-        selected = answers_dict.get(key, [])
-        if isinstance(selected, int):
-            selected = [selected]
-        selected = set(map(int, selected)) if selected else set()
-
-        cur.execute("SELECT option_id, is_correct FROM options WHERE question_id=?", (qid,))
-        rows = cur.fetchall()
-        correct = {r["option_id"] for r in rows if r["is_correct"] == 1}
-
-        if selected == correct and len(correct) > 0:
-            total_score += q["points"]
-
-    conn.close()
-    return total_score
-
-
 '''Routes'''
 # Find the exam
+# TODO: Make endpoints accessible ONLY to logged-in students
 @takeExamBp.route('', methods=['GET', 'POST'])
 def exam_search():
     form = ExamSearchForm()
     if form.validate_on_submit():
-        exam = Exams.query.get({"exam_id":form.examID.data})
-        if not exam:
-            form.examID.errors = ("Exam not found.",)
-            return render_template('exam_search.html', form=form)
+        exam = Exams.query.get(form.examID.data)
 
         # Store exam_id in session as a cookie
         session['exam_id'] = exam.exam_id
@@ -75,12 +38,14 @@ def exam_initialization():
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
     form = ExamInitializationForm()
+    form.exam_id.data = exam_id
     if form.validate_on_submit():
         return redirect(url_for('takeExamBp.start'))
 
     return render_template('exam_initialization.html', form=form, exam=exam, instructor_name=exam_instructor.name)
 
 # Show exam questions
+# TODO: Add save and exit functionality + create submission as soon as student starts exam
 @takeExamBp.route('/start', methods=['GET', 'POST'])
 def start():
     exam_id = session.get('exam_id')
@@ -113,12 +78,12 @@ def start():
             subform.single_or_multi.data = 'single'
             subform.answer_single.choices = choices
 
-        print ("Added question", question.question_id, "with choices", choices)
+        print ("Added question", question.question_id, "with choices", choices) # Debugging
 
     if form.validate_on_submit():
         # Collect answers
         answers = {}
-        print ("Submission validated")
+        print ("Submission validated") # Debugging
         for subform in form.questions:
             qid = subform.question_id.data
 
@@ -127,8 +92,38 @@ def start():
             else:
                 answers[qid] = subform.answer_single.data
 
-        print("Collected answers:", answers)
-        # TODO: calculate score and store submission in DB
-        return jsonify(message="Exam submitted", answers=answers), 200
+        print("Collected answers:", answers) # Debugging
+        score = 0
+        for question in questions:
+            if question.is_multiple_correct:
+                answer_is_correct = True
+                correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
+                for option in correct_options:
+                    if option.option_id not in answers[question.question_id]:
+                        answer_is_correct = False
+
+                if answer_is_correct:
+                    score += question.points
+
+                continue
+
+            option = Options.query.get(answers[question.question_id])
+            if option.is_correct:
+                score += question.points
+
+        submission = Submissions(
+            exam_id = exam.exam_id,
+            roll_number = current_user.roll_number,
+            started_at = datetime.utcnow(),
+            submitted_at = datetime.utcnow(),
+            status = "SUBMITTED",
+            answers = answers,
+            total_score = score
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        print("Exam submitted: ", answers) # Debugging
+        return redirect(url_for('dashboard'))
 
     return render_template('submission.html', form=form, exam=exam, questions=questions)

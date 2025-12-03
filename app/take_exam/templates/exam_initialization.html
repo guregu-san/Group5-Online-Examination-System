@@ -29,6 +29,22 @@
             {% if exam.security_settings.password != '' %}
                 {{ form.password }}<br>
             {% endif %}
+            {% if form.password.errors %}
+                <div class="alert alert-warning alert-dismissable" id="auto-fade-alert">
+                    <strong>Wrong password</strong>
+                </div>
+
+                <script>
+                    setTimeout(function() {
+                        let alertBox = document.getElementById("auto-fade-alert");
+                        if (alertBox) {
+                            alertBox.style.transition = "opacity 1s ease";
+                            alertBox.style.opacity = "0";
+                            setTimeout(() => alertBox.remove(), 1000);
+                        }
+                    }, 2500);
+                </script>
+            {% endif %}
             {{ form.submit(class="btn btn-primary") }}
             <a href="{{ url_for('takeExamBp.exam_search') }}" class="btn btn-danger">Cancel</a>
         </form>

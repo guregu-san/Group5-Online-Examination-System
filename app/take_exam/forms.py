@@ -10,20 +10,36 @@ from wtforms import (
     RadioField,
     SelectMultipleField,
 )
-from wtforms.validators import InputRequired, Length, Optional
+from wtforms.validators import InputRequired, Length, Optional, ValidationError
 from wtforms.widgets import ListWidget, CheckboxInput
+
+from app.models import Exams
 
 
 class ExamSearchForm(FlaskForm):
-    examID = StringField(validators=[InputRequired(), Length(min=1, max=16)], render_kw={"placeholder": "Enter Exam ID"})
-
+    examID = StringField(validators=[InputRequired(), Length(min=1, max=16)], render_kw={"placeholder": "Enter exam ID"})
     submit = SubmitField('Search')
+
+    def validate_examID(self, examID):
+        exam = Exams.query.get(examID.data)
+        if not exam:
+            raise ValidationError('Exam not found')
 
 
 class ExamInitializationForm(FlaskForm):
-    password = PasswordField(validators=[InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Enter Exam Password"})
-
+    exam_id = HiddenField()
+    password = PasswordField(validators=[Length(min=0, max=20)], render_kw={"placeholder": "Enter exam password"})
     submit = SubmitField('Accept')
+
+    def validate_password(self, password):
+        exam = Exams.query.get(self.exam_id.data)
+        if not exam:
+            raise ValidationError('Exam not found')
+
+        # For debugging
+        print("Input: ", password.data, '\nCorrect: ', exam.security_settings["password"])
+        if exam.security_settings["password"] != "" and password.data != exam.security_settings["password"]:
+            raise ValidationError('Incorrect password')
 
 
 class MultiCheckboxField(SelectMultipleField):
@@ -41,12 +57,10 @@ class QuestionAnswerForm(Form):
     """
     question_id = HiddenField()
     single_or_multi = HiddenField()
-
     answer_single = RadioField(choices=[], coerce=int, validators=[Optional()]) #Might have to change coerce
     answer_multi = MultiCheckboxField(choices=[], coerce=int, validators=[Optional()])
 
 class SubmissionForm(FlaskForm):
     """Top-level submission form with a dynamic list of questions."""
     questions = FieldList(FormField(QuestionAnswerForm), min_entries=1)
-
     submit = SubmitField('Submit')

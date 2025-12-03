@@ -1,4 +1,5 @@
 # Online-Examination-System
+## Key Features
 content
 
 ## how to use virtual environment for python
@@ -19,7 +20,7 @@ python -m pip install --upgrade pip setuptools wheel
 ### 4) install the packages
 Packages:
 ```
-pip install flask flask_sqlalchemy flask_login flask_bcrypt flask_wtf wtforms email_validator Flask-Bootstrap
+pip install flask flask_sqlalchemy flask_login flask_bcrypt flask_wtf wtforms email_validator Flask-Mail Flask-Bootstrap dotenv
 ```
 
 ### 5) quick verification (optional)
