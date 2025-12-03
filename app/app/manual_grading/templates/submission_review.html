@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" id="submission-root" data-submission-id="{{ submission_id }}">
+  <h3 id="submissionTitle">Review Submission #{{ submission_id }}</h3>
+
+  <!-- Instructor email -->
+  <div class="mt-2">
+    <label class="form-label">Instructor Email (for backend check)</label>
+    <input
+      id="instructorEmail"
+      class="form-control"
+      type="email"
+      value="teacher@uni.com"
+    />
+    <button id="reloadWithEmailBtn" class="btn btn-secondary btn-sm mt-2">
+      Reload with this email
+    </button>
+  </div>
+
+  <!-- Error & loading -->
+  <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+  <p id="loadingText" class="mt-3">Loading submission...</p>
+
+  <!-- Submission meta -->
+  <div id="submissionMeta" class="mt-3 d-none">
+    <p id="submissionMetaLine1"></p>
+    <p id="submissionMetaLine2"></p>
+  </div>
+
+  <!-- Answers -->
+  <h5 class="mt-4">Answers</h5>
+  <div id="answersList" class="list-group mt-2">
+    <!-- Filled dynamically -->
+  </div>
+
+  <!-- Overall feedback -->
+  <h5 class="mt-4">Overall Feedback</h5>
+  <textarea
+    id="overallFeedback"
+    class="form-control"
+    rows="3"
+  ></textarea>
+  <button id="saveOverallFeedbackBtn" class="btn btn-outline-primary mt-2">
+    Save Overall Feedback
+  </button>
+
+  <!-- Actions -->
+  <div class="mt-4 d-flex gap-2">
+    <button id="recalcBtn" class="btn btn-secondary">
+      Recalculate Total
+    </button>
+    <button id="saveBtn" class="btn btn-primary">
+      Save &amp; Mark as GRADED
+    </button>
+    <button id="cancelBtn" class="btn btn-outline-danger">
+      Cancel Review
+    </button>
+  </div>
+
+  <a id="backLink" class="btn btn-link mt-3" href="#">
+    ← Back to submissions list
+  </a>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const root = document.getElementById("submission-root");
+    const submissionId = root.dataset.submissionId;
+
+    const instructorEmailInput = document.getElementById("instructorEmail");
+    const reloadWithEmailBtn = document.getElementById("reloadWithEmailBtn");
+    const errorBox = document.getElementById("errorBox");
+    const loadingText = document.getElementById("loadingText");
+    const submissionMeta = document.getElementById("submissionMeta");
+    const metaLine1 = document.getElementById("submissionMetaLine1");
+    const metaLine2 = document.getElementById("submissionMetaLine2");
+    const answersList = document.getElementById("answersList");
+    const overallFeedbackTextarea = document.getElementById("overallFeedback");
+    const saveOverallFeedbackBtn = document.getElementById("saveOverallFeedbackBtn");
+    const recalcBtn = document.getElementById("recalcBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const backLink = document.getElementById("backLink");
+
+    let submission = null;
+    let answers = [];
+    let totalScore = null;
+
+    function showError(message) {
+      if (!message) {
+        errorBox.classList.add("d-none");
+        errorBox.textContent = "";
+        return;
+      }
+      errorBox.textContent = message;
+      errorBox.classList.remove("d-none");
+    }
+
+    function setLoading(isLoading) {
+      loadingText.style.display = isLoading ? "block" : "none";
+    }
+
+    function renderMeta() {
+      if (!submission) return;
+      submissionMeta.classList.remove("d-none");
+      metaLine1.innerHTML =
+        "<strong>Exam ID:</strong> " +
+        submission.exam_id +
+        " | <strong>Roll:</strong> " +
+        (submission.roll_number || "");
+      const score = totalScore != null ? totalScore : submission.total_score;
+      metaLine2.innerHTML =
+        "<strong>Status:</strong> " +
+        submission.status +
+        " | <strong>Total Score:</strong> " +
+        (score != null ? score : 0);
+      backLink.href =
+        "/instructor/grading/exams/" + submission.exam_id + "/submissions";
+    }
+
+    function renderAnswers() {
+      answersList.innerHTML = "";
+      if (!answers || answers.length === 0) {
+        answersList.innerHTML =
+          '<div class="list-group-item text-center">No answers stored.</div>';
+        return;
+      }
+
+      answers.forEach(function (ans) {
+        const item = document.createElement("div");
+        item.className = "list-group-item";
+
+        item.innerHTML = `
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>Question #${ans.question_id}</strong>
+              <div class="mt-1">
+                <span class="fw-semibold">Answer: </span>
+                ${ans.answer_text || "(no stored text)"}
+              </div>
+              <div class="mt-1 small text-muted">
+                Auto: ${ans.auto_points ?? 0} |
+                Manual: ${ans.manual_points ?? 0} |
+                Final: ${ans.final_points ?? 0}
+              </div>
+              ${
+                ans.feedback
+                  ? `<div class="mt-1">
+                      <span class="fw-semibold">Feedback:</span>
+                      <pre class="mb-0 small">${ans.feedback}</pre>
+                    </div>`
+                  : ""
+              }
+            </div>
+            <div class="text-end">
+              <button class="btn btn-sm btn-success mb-1"
+                      data-action="mark-correct"
+                      data-question-id="${ans.question_id}">
+                Mark Correct
+              </button><br/>
+              <button class="btn btn-sm btn-outline-danger mb-1"
+                      data-action="mark-wrong"
+                      data-question-id="${ans.question_id}">
+                Mark Wrong
+              </button><br/>
+              <button class="btn btn-sm btn-outline-primary mb-1"
+                      data-action="partial-points"
+                      data-question-id="${ans.question_id}">
+                Set Partial Points
+              </button><br/>
+              <button class="btn btn-sm btn-outline-secondary"
+                      data-action="add-feedback"
+                      data-question-id="${ans.question_id}">
+                Add Feedback
+              </button>
+            </div>
+          </div>
+        `;
+
+        answersList.appendChild(item);
+      });
+    }
+
+    async function openSubmission() {
+      showError("");
+      setLoading(true);
+      submissionMeta.classList.add("d-none");
+      answersList.innerHTML = "";
+
+      const email = instructorEmailInput.value.trim() || "teacher@uni.com";
+
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/open",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ instructor_email: email }),
+          }
+        );
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to open submission for review");
+        }
+
+        const data = await res.json();
+        submission = data;
+        answers = data.answers || [];
+        totalScore = data.total_score || data.totalScore || null;
+        overallFeedbackTextarea.value = data.feedback || "";
+        renderMeta();
+        renderAnswers();
+      } catch (err) {
+        console.error(err);
+        showError(err.message || "Failed to open submission for review");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function handleToggleVerdict(questionId, forceCorrect) {
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/answers/" +
+            questionId +
+            "/toggle-verdict",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ force_correct: forceCorrect }),
+          }
+        );
+        if (!res.ok) {
+          throw new Error("Failed to toggle verdict");
+        }
+        const data = await res.json();
+        const updatedFinal = data.final_points;
+        const updatedTotal = data.total_score;
+
+        answers = answers.map(function (a) {
+          if (a.question_id === questionId) {
+            return {
+              ...a,
+              manual_points: updatedFinal,
+              final_points: updatedFinal,
+            };
+          }
+          return a;
+        });
+
+        totalScore = updatedTotal;
+        renderMeta();
+        renderAnswers();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to toggle verdict");
+      }
+    }
+
+    async function handlePartialPoints(questionId, currentPoints) {
+      const input = window.prompt(
+        "Enter manual points:",
+        currentPoints != null ? currentPoints : 0
+      );
+      if (input === null) return;
+
+      const value = parseFloat(input);
+      if (Number.isNaN(value)) {
+        alert("Invalid number");
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/answers/" +
+            questionId +
+            "/manual-points",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ points: value }),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to set manual points");
+        const data = await res.json();
+        const updatedTotal = data.total_score;
+
+        answers = answers.map(function (a) {
+          if (a.question_id === questionId) {
+            return { ...a, manual_points: value, final_points: value };
+          }
+          return a;
+        });
+
+        totalScore = updatedTotal;
+        renderMeta();
+        renderAnswers();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to set manual points");
+      }
+    }
+
+    async function handleQuestionFeedback(questionId) {
+      const input = window.prompt("Enter feedback for this question:");
+      if (!input) return;
+
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/feedback",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ comment: input, question_id: questionId }),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to add question feedback");
+
+        answers = answers.map(function (a) {
+          if (a.question_id === questionId) {
+            return {
+              ...a,
+              feedback: a.feedback ? a.feedback + "\n" + input : input,
+            };
+          }
+          return a;
+        });
+        renderAnswers();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to add question feedback");
+      }
+    }
+
+    async function handleOverallFeedbackSave() {
+      const text = overallFeedbackTextarea.value.trim();
+      if (!text) {
+        alert("Feedback is empty");
+        return;
+      }
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/feedback",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ comment: text }),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to save overall feedback");
+        alert("Overall feedback saved");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save overall feedback");
+      }
+    }
+
+    async function handleRecalc() {
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/recalc",
+          { method: "POST" }
+        );
+        if (!res.ok) throw new Error("Failed to recalculate");
+        const data = await res.json();
+        totalScore = data.total_score;
+        renderMeta();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to recalculate");
+      }
+    }
+
+    async function handleSave() {
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/save",
+          { method: "POST" }
+        );
+        if (!res.ok) throw new Error("Failed to save grading");
+        const data = await res.json();
+        totalScore = data.total_score;
+        renderMeta();
+        alert("Submission graded and saved");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save grading");
+      }
+    }
+
+    async function handleCancel() {
+      if (!window.confirm("Cancel review and revert status?")) return;
+      try {
+        const res = await fetch(
+          "http://localhost:5000/grading/submissions/" +
+            submissionId +
+            "/cancel",
+          { method: "POST" }
+        );
+        if (!res.ok) throw new Error("Failed to cancel review");
+        alert("Review canceled");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to cancel review");
+      }
+    }
+
+    // Button handlers
+    reloadWithEmailBtn.addEventListener("click", openSubmission);
+    saveOverallFeedbackBtn.addEventListener("click", handleOverallFeedbackSave);
+    recalcBtn.addEventListener("click", handleRecalc);
+    saveBtn.addEventListener("click", handleSave);
+    cancelBtn.addEventListener("click", handleCancel);
+
+    // Answers list button delegation
+    answersList.addEventListener("click", function (e) {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const questionId = parseInt(btn.dataset["questionId"], 10);
+      const ans = answers.find((a) => a.question_id === questionId);
+
+      if (!ans) return;
+
+      if (action === "mark-correct") {
+        handleToggleVerdict(questionId, true);
+      } else if (action === "mark-wrong") {
+        handleToggleVerdict(questionId, false);
+      } else if (action === "partial-points") {
+        const current =
+          ans.manual_points ??
+          ans.final_points ??
+          ans.auto_points ??
+          0;
+        handlePartialPoints(questionId, current);
+      } else if (action === "add-feedback") {
+        handleQuestionFeedback(questionId);
+      }
+    });
+
+    // Initial load (like useEffect([]))
+    openSubmission();
+  });
+</script>
+{% endblock %}
