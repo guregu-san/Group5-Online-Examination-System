@@ -50,6 +50,13 @@
                     {{ form.name.label }}<br>
                     {{ form.name(class="form-control") }}
             </div>
+            {% if form.name.errors %}
+                <div class="text-danger">
+                    {% for error in form.name.errors %}
+                        <small>{{ error }}</small><br>
+                    {% endfor %}
+                </div>
+            {% endif %}
             <div id="student-fields">
                 <div class="form-group">
                     {{ form.roll_number.label }}<br>
