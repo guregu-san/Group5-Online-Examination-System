@@ -18,6 +18,13 @@
                     <label class="radio-item">{{ subfield }} {{ subfield.label.text }}</label>
                     {%- endfor -%}
                 </div>
+                {% if form.role.errors %}
+                <div class="text-danger">
+                    {% for error in form.role.errors %}
+                        <small>{{ error }}</small><br>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="form-group">
@@ -74,6 +81,13 @@
                     {{ form.contact_number.label }}<br>
                     {{ form.contact_number(class="form-control") }}
                 </div>
+                {% if form.contact_number.errors %}
+                    <div class="text-danger">
+                        {% for error in form.contact_number.errors %}
+                            <small>{{ error }}</small><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 <br>
             </div>
             <div class="form-group">

@@ -47,6 +47,7 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('authBp.login'))
+
 @authBp.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -80,6 +81,7 @@ def register():
         return redirect(url_for('authBp.verification_sent'))
 
     return render_template('register.html', form=form)
+
 @authBp.route('/verify_email/<token>')
 def verify_email(token):
     data = confirm_verification_token(token)

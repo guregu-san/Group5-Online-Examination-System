@@ -30,7 +30,7 @@ class LoginForm(FlaskForm):
 class RegisterForm(FlaskForm):
     email = StringField(render_kw={"placeholder": "email"}, filters=[lambda x: x.strip() if x else None])
     password = PasswordField(render_kw={"placeholder": "Password"})
-    role = RadioField('Role', choices=[('Student'), ('Instructor')], default='Student')
+    role = RadioField('Role', choices=[('Student', 'Student'), ('Instructor', 'Instructor')], default='Student')
     roll_number = StringField(render_kw={"placeholder": "Roll Number"}, filters=[lambda x: x.strip() if x else None])
     name = StringField(render_kw={"placeholder": "Name"}, filters=[lambda x: x.strip() if x else None])
     contact_number = StringField(render_kw={"placeholder": "Contact Number"}, filters=[lambda x: x.strip() if x else None])
@@ -44,8 +44,8 @@ class RegisterForm(FlaskForm):
             raise ValidationError("Email must be between 4 and 50 characters.")
 
         email_data = email.data.lower()
-        role = self.role.data or 'student'
-        if role == 'student':
+        role = self.role.data or 'Student'
+        if role == 'Student':
             existing_user_email = Students.query.filter_by(email=email_data).first()
         else:
             existing_user_email = Instructors.query.filter_by(email=email_data).first()
@@ -68,18 +68,23 @@ class RegisterForm(FlaskForm):
                 raise ValidationError("That roll number is already in use. Please choose a different one.")
 
     def validate_name(self, name):
-        if self.role.data == 'Student':
-            if not name.data:
-                raise ValidationError("Name is required for Students.")
-            if len(name.data) < 2 or len(name.data) > 50:
-                raise ValidationError("Name must be between 2 and 50 characters.")
+        if not name.data:
+            raise ValidationError("Name is required.")
+        if len(name.data) < 2 or len(name.data) > 50:
+            raise ValidationError("Name must be between 2 and 50 characters.")
 
     def validate_contact_number(self, contact_number):
+        if not contact_number.data and self.role.data == 'Student':
+            raise ValidationError("Contact Number is required for Students.")
         if self.role.data == 'Student':
             if not contact_number.data:
                 raise ValidationError("Contact Number is required for Students.")
             if len(contact_number.data) < 10 or len(contact_number.data) > 15:
                 raise ValidationError("Contact Number must be between 10 and 15 characters.")
+            
+            existing_student_contact = Students.query.filter_by(contact_number=contact_number.data).first()
+            if existing_student_contact:
+                raise ValidationError("That contact number is already in use. Please choose a different one.")
         else:
             if contact_number.data and (len(contact_number.data) < 10 or len(contact_number.data) > 15):
                 raise ValidationError("Contact Number must be between 10 and 15 characters.")

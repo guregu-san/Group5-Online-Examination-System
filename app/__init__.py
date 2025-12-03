@@ -31,6 +31,7 @@ app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL') == 'True'
 bs = Bootstrap(app)
 db.init_app(app)
 bcrypt.init_app(app)
+mail.init_app(app)
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Verification Sent{% endblock %}
+
+{% block main_content %}
+<div class="container" style="display: flex; justify-content: center; margin-top: 50px;">
+    <div class="card">
+        <h1>Verify Your OES Account</h1>
+        <p>Thank you for registering with the Online Examination System (OES)!</p>
+        <p>A verification email has been sent to your email address.</p>
+        <p>Please check your inbox and click the link to verify your account before logging in.</p>
+        <hr>
+        <p class="text-muted">If you do not receive the email within a few minutes, please check your spam folder.</p>
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('authBp.login') }}" class="btn btn-primary">Go to Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
