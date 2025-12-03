@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Create Exam{% endblock %}
+
+{% block main_content %}
+<div class="card-container" style="display:flex; justify-content:center; margin-top:40px;">
+  <div class="card" style="width:450px; padding:40px; background:#e2e2e2; border-radius:20px;">
+
+    <h1 class="text-center" style="margin-bottom:20px;">Create Exam</h1>
+    <p class="text-center" style="margin-bottom:30px;">Start by entering course details</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category in ['danger', 'error'] else category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="">
+      {{ form.hidden_tag() }}
+
+      <!-- Course Code -->
+      <div class="form-group mb-3">
+        {{ form.course_code.label }}
+        {{ form.course_code(class="form-control", placeholder="Course code") }}
+      </div>
+
+      <!-- Instructor Name or Email -->
+      <div class="form-group mb-3">
+        {{ form.instructor_email.label }}
+        {{ form.instructor_email(class="form-control", placeholder="Instructor Name") }}
+      </div>
+
+      <!-- Title is hidden (default Exam Name) -->
+      <div style="display:none;">
+        {{ form.title(class="form-control", value="Exam Name") }}
+      </div>
+
+      <!-- Time limit hidden here, configured later -->
+      <div style="display:none;">
+        {{ form.time_limit(class="form-control") }}
+      </div>
+
+      <!-- Security also hidden -->
+      <div style="display:none;">
+        {{ form.security_settings(class="form-control") }}
+      </div>
+
+      <div class="text-center mt-4">
+        {{ form.submit(class="btn btn-primary", style="padding:10px 30px; border-radius:10px;") }}
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
