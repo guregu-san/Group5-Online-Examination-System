@@ -2,9 +2,10 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ "main", "email-authorization"  ]
+    branches: [ "main", "docker-test" ]
   pull_request:
-    branches: [ "main", "email-authorization"  ]
+    branches: [ "main", "docker-test" ]
+  workflow_dispatch: 
 
 jobs:
   build-and-test:
