@@ -1,0 +1,37 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", , "email-authorization"  ]
+  pull_request:
+    branches: [ "main", , "email-authorization"  ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Tests
+      env:
+        MAIL_SERVER: localhost
+        MAIL_PORT: 2525
+        MAIL_USERNAME: user
+        MAIL_PASSWORD: password
+        MAIL_USE_TLS: False
+        MAIL_USE_SSL: False
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        python -m unittest discover -v tests
