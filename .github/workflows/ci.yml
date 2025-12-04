@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ "main", , "email-authorization"  ]
+    branches: [ "main", "email-authorization"  ]
   pull_request:
-    branches: [ "main", , "email-authorization"  ]
+    branches: [ "main", "email-authorization"  ]
 
 jobs:
   build-and-test:
