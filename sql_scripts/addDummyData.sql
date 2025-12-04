@@ -28,12 +28,19 @@ VALUES
     ('CS103', 'Data Structures', 'bob.smith@univ.edu');
 
 -- Exams
-INSERT INTO exams (instructor_email, course_code, title, time_limit, security_settings, created_at, updated_at)
+INSERT INTO exams (instructor_email, course_code, title, security_settings, opens_at, closes_at)
 VALUES
-    ('teacher@uni.com', 'CS101', 'Midterm Exam v2', 100, '{"password": "", "shuffle": true, "single_session": false, "no_tab_switching": false}', '2025-01-01 10:00:00', '2025-01-01 10:05:00'),
-    ('joe@example.com', NULL, 'Sample Exam', 30, '{"password": "111", "shuffle": false, "single_session": true, "no_tab_switching": false}', '2025-01-01 12:00:00', NULL),
-    ('alice.johnson@univ.edu', 'CS102', 'Midterm Exam', 60, '{"password": "1234", "shuffle": true, "single_session": true, "no_tab_switching": true}', '2025-01-01 11:00:00', NULL),
-    ('bob.smith@univ.edu', 'CS103', 'Final Exam', 90, '{"password": "121212", "shuffle": false, "single_session": false, "no_tab_switching": true}', '2025-01-01 10:11:00', '2025-01-01 10:12:00');
+    ('teacher@uni.com', 'CS101', 'Midterm Exam v2', '{"password": "", "shuffle": true, "single_session": false, "no_tab_switching": false}',
+     '2025-12-04 10:00:00', '2026-01-01 12:00:00'),
+
+    ('joe@example.com', NULL, 'Sample Exam', '{"password": "111", "shuffle": false, "single_session": true, "no_tab_switching": false}',
+     '2025-12-04 10:00:00', '2026-01-01 12:00:00'),
+
+    ('alice.johnson@univ.edu', 'CS102', 'Midterm Exam', '{"password": "1234", "shuffle": true, "single_session": true, "no_tab_switching": true}',
+     '2025-12-04 10:00:00', '2026-01-01 12:00:00'),
+
+    ('bob.smith@univ.edu', 'CS103', 'Final Exam', '{"password": "121212", "shuffle": false, "single_session": false, "no_tab_switching": true}',
+     '2026-01-10 10:00:00', '2026-01-10 13:00:00');
 
 -- Questions
 INSERT INTO questions (exam_id, question_text, is_multiple_correct, points, order_index)
@@ -87,7 +94,7 @@ VALUES
 -- Submissions
 INSERT INTO submissions (exam_id, roll_number, started_at, submitted_at, updated_at, feedback, status, answers, total_score)
 VALUES
-    (1, 101, '2025-01-02 10:00:00', '2025-01-01 10:40:00', '2025-01-01 10:50:00', 'Good job!', 'REVIEWED', '{"1":2,"2":5}', 18),
-    (1, 102, '2025-01-02 10:05:00', '2025-01-01 10:50:00', NULL, NULL, 'SUBMITTED', '{"1":1,"2":5}', 10),
+    (1, 101, '2025-12-04 10:00:10', '2025-12-05 10:40:00', '2026-01-01 12:50:00', 'Good job!', 'REVIEWED', '{"1":2,"2":5}', 18),
+    (1, 102, '2025-12-04 10:05:00', '2025-12-05 10:50:00', NULL, NULL, 'SUBMITTED', '{"1":1,"2":5}', 10),
 
-    (3, 103, '2025-01-10 09:00:00', NULL, NULL, NULL, 'IN_PROGRESS', '{"5":14}', NULL);
+    (3, 103, '2025-12-04 10:30:00', NULL, NULL, NULL, 'IN_PROGRESS', '{"5":14}', NULL);

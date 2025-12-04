@@ -25,10 +25,11 @@ CREATE TABLE IF NOT EXISTS exams (
     instructor_email TEXT NOT NULL,
     course_code TEXT,
     title TEXT NOT NULL,
-    time_limit INTEGER,
     security_settings TEXT NOT NULL,
+    opens_at DATETIME NOT NULL,
+    closes_at DATETIME NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
     FOREIGN KEY (instructor_email) REFERENCES instructors(email),
     FOREIGN KEY (course_code) REFERENCES courses(course_code)
 );

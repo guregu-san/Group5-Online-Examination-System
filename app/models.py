@@ -38,8 +38,9 @@ class Exams(db.Model):
     instructor_email = db.Column(db.String(50), db.ForeignKey("instructors.email"), nullable=False)
     course_code = db.Column(db.String(50), db.ForeignKey("courses.course_code"))
     title = db.Column(db.String(100), nullable=False)
-    time_limit = db.Column(db.Integer, nullable=True)
     security_settings = db.Column(db.JSON, nullable=False)
+    opens_at = db.Column(db.DateTime, nullable=False)
+    closes_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     updated_at = db.Column(db.DateTime)
 

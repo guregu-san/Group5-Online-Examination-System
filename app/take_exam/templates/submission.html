@@ -4,9 +4,9 @@
 {%block title%}Take Exam{%endblock%}
 
 {%block main_content%}
-<div class="card p-3"> 
+<div class="card p-3">
   <h2 class="mb-2">{{ exam.title }}</h2>
-  {% if exam.time_limit %}<p class="text-muted">Time limit: {{ exam.time_limit }} minutes</p>{% endif %}
+  <p class="text-muted">Time limit: X minutes</p>
 
   <form method="POST" action="">
     {{ form.hidden_tag() }}

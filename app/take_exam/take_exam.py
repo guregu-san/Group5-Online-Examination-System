@@ -40,6 +40,15 @@ def exam_initialization():
     form = ExamInitializationForm()
     form.exam_id.data = exam_id
     if form.validate_on_submit():
+        submission = Submissions(
+            exam_id = exam.exam_id,
+            roll_number = current_user.roll_number,
+            started_at = datetime.utcnow(),
+            status = "IN_PROGRESS"
+        )
+        db.session.add(submission)
+        db.session.commit()
+
         return redirect(url_for('takeExamBp.start'))
 
     return render_template('exam_initialization.html', form=form, exam=exam, instructor_name=exam_instructor.name)
@@ -96,13 +105,13 @@ def start():
         score = 0
         for question in questions:
             if question.is_multiple_correct:
-                answer_is_correct = True
+                answers_are_correct = True
                 correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
                 for option in correct_options:
                     if option.option_id not in answers[question.question_id]:
-                        answer_is_correct = False
+                        answers_are_correct = False
 
-                if answer_is_correct:
+                if answers_are_correct:
                     score += question.points
 
                 continue
@@ -111,17 +120,14 @@ def start():
             if option.is_correct:
                 score += question.points
 
-        submission = Submissions(
-            exam_id = exam.exam_id,
-            roll_number = current_user.roll_number,
-            started_at = datetime.utcnow(),
-            submitted_at = datetime.utcnow(),
-            status = "SUBMITTED",
-            answers = answers,
-            total_score = score
-        )
-        db.session.add(submission)
-        db.session.commit()
+        submission = Submissions.query.filter_by(exam_id=exam.exam_id, roll_number=current_user.roll_number).order_by(Submissions.submitted_at.desc()).first()
+
+        if (submission.status == "IN_PROGRESS"):
+            submission.submitted_at = datetime.utcnow()
+            submission.status = "SUBMITTED"
+            submission.answers = answers
+            submission.total_score = score
+            db.session.commit()
 
         print("Exam submitted: ", answers) # Debugging
         return redirect(url_for('dashboard'))
