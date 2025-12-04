@@ -102,34 +102,43 @@ def start():
                 answers[qid] = subform.answer_single.data
 
         print("Collected answers:", answers) # Debugging
-        score = 0
-        for question in questions:
-            if question.is_multiple_correct:
-                answers_are_correct = True
-                correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
-                for option in correct_options:
-                    if option.option_id not in answers[question.question_id]:
-                        answers_are_correct = False
 
-                if answers_are_correct:
+
+        submission = Submissions.query.filter_by(exam_id=exam.exam_id, roll_number=current_user.roll_number).order_by(Submissions.started_at.desc()).first()
+
+        if (submission.status != "IN_PROGRESS"):
+            return redirect(url_for('dashboard'))
+
+        submission.answers = answers
+        submission.updated_at = datetime.utcnow()
+
+        if (form.submit.data):
+            # Calculate score
+            score = 0
+            for question in questions:
+                if question.is_multiple_correct:
+                    answers_are_correct = True
+                    correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
+                    for option in correct_options:
+                        if option.option_id not in answers[question.question_id]:
+                            answers_are_correct = False
+
+                    if answers_are_correct:
+                        score += question.points
+
+                    continue
+
+                option = Options.query.get(answers[question.question_id])
+                if option.is_correct:
                     score += question.points
 
-                continue
-
-            option = Options.query.get(answers[question.question_id])
-            if option.is_correct:
-                score += question.points
-
-        submission = Submissions.query.filter_by(exam_id=exam.exam_id, roll_number=current_user.roll_number).order_by(Submissions.submitted_at.desc()).first()
-
-        if (submission.status == "IN_PROGRESS"):
             submission.submitted_at = datetime.utcnow()
             submission.status = "SUBMITTED"
-            submission.answers = answers
             submission.total_score = score
-            db.session.commit()
+            print("Exam submitted: ", answers) # Debugging
 
-        print("Exam submitted: ", answers) # Debugging
+        db.session.commit()
+
         return redirect(url_for('dashboard'))
 
     return render_template('submission.html', form=form, exam=exam, questions=questions)

@@ -64,3 +64,4 @@ class SubmissionForm(FlaskForm):
     """Top-level submission form with a dynamic list of questions."""
     questions = FieldList(FormField(QuestionAnswerForm), min_entries=1)
     submit = SubmitField('Submit')
+    save = SubmitField('Save and Exit')
