@@ -9,7 +9,7 @@
     <div class="card">
         <h1>{{ exam.title }}</h1>
         <h4>
-            Instructor: <p>{{ instructor_name }}</p><br>
+            Instructor: <p>{{ instructor.name }}</p><br>
             Time Limit: <p>X minutes</p><br>
             Security Settings:<br>
             <p>
@@ -45,8 +45,12 @@
                     }, 2500);
                 </script>
             {% endif %}
-            {{ form.submit(class="btn btn-primary") }}
-            <a href="{{ url_for('takeExamBp.exam_search') }}" class="btn btn-danger">Cancel</a>
+            {% if taking_exam %}
+                {{ form.continue_submission(class="btn btn-primary") }}
+            {% else %}
+                {{ form.accept(class="btn btn-primary") }}
+                {{ form.cancel(class="btn btn-danger") }}
+            {% endif %}
         </form>
     </div>
 </div>

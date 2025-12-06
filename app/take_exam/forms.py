@@ -29,9 +29,14 @@ class ExamSearchForm(FlaskForm):
 class ExamInitializationForm(FlaskForm):
     exam_id = HiddenField()
     password = PasswordField(validators=[Length(min=0, max=20)], render_kw={"placeholder": "Enter exam password"})
-    submit = SubmitField('Accept')
+    accept = SubmitField('Accept')
+    cancel = SubmitField('Cancel')
+    continue_submission = SubmitField('Continue')
 
     def validate_password(self, password):
+        if self.cancel.data:
+            return
+
         exam = Exams.query.get(self.exam_id.data)
         if not exam:
             raise ValidationError('Exam not found')
@@ -57,7 +62,7 @@ class QuestionAnswerForm(Form):
     """
     question_id = HiddenField()
     single_or_multi = HiddenField()
-    answer_single = RadioField(choices=[], coerce=int, validators=[Optional()]) #Might have to change coerce
+    answer_single = RadioField(choices=[], coerce=int, validators=[Optional()])
     answer_multi = MultiCheckboxField(choices=[], coerce=int, validators=[Optional()])
 
 class SubmissionForm(FlaskForm):

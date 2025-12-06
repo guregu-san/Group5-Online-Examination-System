@@ -1,7 +1,8 @@
 PRAGMA foreign_keys = ON;
 
 -- Instructors
-INSERT INTO instructors (name, email, password_hash)
+INSERT INTO instructors
+    (name, email, password_hash)
 VALUES
     ('Teacher One', 'teacher@uni.com', 'pass'),
     ('Dr. Alice Johnson', 'alice.johnson@univ.edu', 'hash_pw_alice'),
@@ -11,7 +12,8 @@ VALUES
     ('Prof. Bob Smith', 'bob.smith@univ.edu', 'hash_pw_bob');
 
 -- Students
-INSERT INTO students (roll_number, name, email, password_hash, contact_number)
+INSERT INTO students
+    (roll_number, name, email, password_hash, contact_number)
 VALUES
     (1, 'Student One', 'student@uni.com', 'pass', '1234567890'),
     (101, 'John Doe', 'john.doe@student.edu', 'hash_pw_john', 9876543210),
@@ -21,14 +23,17 @@ VALUES
     (105, 'jakob', 'jakob@uni.com', '$2b$12$Ped50fSVQC/FQ88.doxsUO1BP1pTIQnq4iB0Af7Dt/Ag2bPcL0tRu', 9876543214);
 
 -- Courses
-INSERT INTO courses (course_code, course_name, instructor_email)
+INSERT INTO courses
+    (course_code, course_name, instructor_email)
 VALUES
     ('CS101', 'Example Course', 'teacher@uni.com'),
     ('CS102', 'Introduction to Programming', 'alice.johnson@univ.edu'),
-    ('CS103', 'Data Structures', 'bob.smith@univ.edu');
+    ('CS103', 'Data Structures', 'bob.smith@univ.edu'),
+    ('PSY101', 'Intro to Human Psychology', 'joe1@uni.com');
 
 -- Exams
-INSERT INTO exams (instructor_email, course_code, title, security_settings, opens_at, closes_at)
+INSERT INTO exams
+    (instructor_email, course_code, title, security_settings, opens_at, closes_at)
 VALUES
     ('teacher@uni.com', 'CS101', 'Midterm Exam v2', '{"password": "", "shuffle": true, "single_session": false, "no_tab_switching": false}',
      '2025-12-04 10:00:00', '2026-01-01 12:00:00'),
@@ -43,7 +48,8 @@ VALUES
      '2026-01-10 10:00:00', '2026-01-10 13:00:00');
 
 -- Questions
-INSERT INTO questions (exam_id, question_text, is_multiple_correct, points, order_index)
+INSERT INTO questions
+    (exam_id, question_text, is_multiple_correct, points, order_index)
 VALUES
     (1, 'What is 4+4?', 0, 8, 1),
     (1, 'What is 3+3?',	0, 10, 2),
@@ -58,7 +64,8 @@ VALUES
     (4, 'Select all tree traversal algorithms.', 1, 10, 2);
 
 -- Options
-INSERT INTO options (question_id, option_text, is_correct)
+INSERT INTO options
+    (question_id, option_text, is_correct)
 VALUES
     (1, '7', 0),
     (1, '8', 1),
@@ -92,7 +99,8 @@ VALUES
     (8, 'Linear search', 0);
 
 -- Submissions
-INSERT INTO submissions (exam_id, roll_number, started_at, submitted_at, updated_at, feedback, status, answers, total_score)
+INSERT INTO submissions
+    (exam_id, roll_number, started_at, submitted_at, updated_at, feedback, status, answers, total_score)
 VALUES
     (1, 101, '2025-12-04 10:00:10', '2025-12-05 10:40:00', '2026-01-01 12:50:00', 'Good job!', 'REVIEWED', '{"1":2,"2":5}', 18),
     (1, 102, '2025-12-04 10:05:00', '2025-12-05 10:50:00', NULL, NULL, 'SUBMITTED', '{"1":1,"2":5}', 10),

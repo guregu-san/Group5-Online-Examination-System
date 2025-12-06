@@ -11,35 +11,73 @@ takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  templat
 
 '''Routes'''
 # Find the exam
-# TODO: Make endpoints accessible ONLY to logged-in students
+# TODO:
+#   - Make endpoints accessible ONLY to logged-in students <3
+#   - If an exam is already in progress it should be shown to the user
 @takeExamBp.route('', methods=['GET', 'POST'])
+@login_required
 def exam_search():
+    # Check for unfinished submission using cookies
+    if session.get('current_submission_id') and session.get('current_exam_id'):
+        print("Student has unfinished submission") # Debug
+        return redirect(url_for('takeExamBp.initialization'))
+
     form = ExamSearchForm()
     if form.validate_on_submit():
         exam = Exams.query.get(form.examID.data)
 
-        # Store exam_id in session as a cookie
-        session['exam_id'] = exam.exam_id
-        return redirect(url_for('takeExamBp.exam_initialization'))
+        # Save searched-for exam
+        session['current_exam_id'] = exam.exam_id
+        return redirect(url_for('takeExamBp.initialization'))
 
     return render_template('exam_search.html', form=form)
 
 # Show exam info and prompt to start
-@takeExamBp.route('/exam_initialization', methods=['GET', 'POST'])
-def exam_initialization():
-    exam_id = session.get('exam_id')
-    if not exam_id:
+# TODO:
+#   - If the current datetime isn't in the exam's availability period inform user
+#   - If cancel is selected the examID cookie should get popped (cancel should be a submit button) <3
+@takeExamBp.route('/initialization', methods=['GET', 'POST'])
+@login_required
+def initialization():
+    # Validate exam cookie
+    current_exam_id = session.get('current_exam_id')
+    if not current_exam_id:
         return redirect(url_for('takeExamBp.exam_search'))
 
-    exam = Exams.query.get({"exam_id":exam_id})
+    exam = Exams.query.get(current_exam_id)
     if not exam:
-        session.pop('exam_id', None)
+        session.pop('current_exam_id', None)
         return redirect(url_for('takeExamBp.exam_search'))
+
+    # Check if student has an unfinished submission
+    taking_exam = False
+    current_submission_id = session.get('current_submission_id')
+    if current_submission_id:
+        submission = Submissions.query.get(current_submission_id)
+        if (not submission) or (submission and submission.status != "IN_PROGRESS"):
+            session.pop('current_submission_id', None)
+        else:
+            # If there's an active submission but the exam and
+            # submission cookies don't match, the exam cookie must be fixed
+            if submission.exam_id != current_exam_id:
+                current_exam_id = submission.exam_id
+                session['current_exam_id'] = submission.exam_id
+
+            taking_exam = True
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
     form = ExamInitializationForm()
-    form.exam_id.data = exam_id
+    form.exam_id.data = current_exam_id
     if form.validate_on_submit():
+        if form.continue_submission.data:
+            return redirect(url_for('takeExamBp.start'))
+
+        if form.cancel.data:
+            # Remove the exam cookie if user declines to start exam
+            session.pop('current_exam_id', None)
+            return redirect(url_for('takeExamBp.exam_search'))
+
+        # Initialize submission and store it in the database + as a cookie
         submission = Submissions(
             exam_id = exam.exam_id,
             roll_number = current_user.roll_number,
@@ -48,26 +86,46 @@ def exam_initialization():
         )
         db.session.add(submission)
         db.session.commit()
+        session['current_submission_id'] = submission.submission_id
 
         return redirect(url_for('takeExamBp.start'))
 
-    return render_template('exam_initialization.html', form=form, exam=exam, instructor_name=exam_instructor.name)
+    return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor, taking_exam=taking_exam)
 
-# Show exam questions
-# TODO: Add save and exit functionality + create submission as soon as student starts exam
+# Load exam
+# TODO:
+#   - If user is continuing submission load existing progress
 @takeExamBp.route('/start', methods=['GET', 'POST'])
+@login_required
 def start():
-    exam_id = session.get('exam_id')
-    if not exam_id:
+    # Validate exam cookie
+    current_exam_id = session.get('current_exam_id')
+    if not current_exam_id:
         return redirect(url_for('takeExamBp.exam_search'))
 
-    exam = Exams.query.get({"exam_id":exam_id})
+    exam = Exams.query.get(current_exam_id)
     if not exam:
-        session.pop('exam_id', None)
+        session.pop('current_exam_id', None)
         return redirect(url_for('takeExamBp.exam_search'))
+
+    # Validate submission cookie
+    current_submission_id = session.get('current_submission_id')
+    if not current_submission_id:
+        return redirect(url_for('takeExamBp.initialization'))
+
+    submission = Submissions.query.get(current_submission_id)
+    if (not submission):
+        session.pop('current_submission_id', None)
+        return redirect(url_for('takeExamBp.initialization'))
 
     form = SubmissionForm()
     questions = Questions.query.filter_by(exam_id=exam.exam_id).all()
+    saved_answers = submission.answers or {}
+
+    # Change dictionary format
+    # Ex. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
+    saved_answers = {int(k): v for k, v in saved_answers.items()}
+    is_post = request.method == 'POST'
 
     # Populate the dynamic form with questions
     for index, question in enumerate(questions):
@@ -83,16 +141,31 @@ def start():
         if question.is_multiple_correct:
             subform.single_or_multi.data = 'multi'
             subform.answer_multi.choices = choices
+
+            # Load saved answers on the submission from the DB, ONLY if it's not a POST request,
+            # otherwise it'll overwrite any changes every time
+            if not is_post and question.question_id in saved_answers:
+                subform.answer_multi.data = saved_answers[question.question_id]
+
         else:
             subform.single_or_multi.data = 'single'
             subform.answer_single.choices = choices
 
-        print ("Added question", question.question_id, "with choices", choices) # Debugging
+            if not is_post and question.question_id in saved_answers:
+                subform.answer_single.data = saved_answers[question.question_id]
+
+        print("Added question", question.question_id, "with choices", choices) # Debugging
+
 
     if form.validate_on_submit():
+        print("Submission validated") # Debugging
+
+        # Once a student submits they can't change their submission, only start a new one
+        if (submission.status != "IN_PROGRESS"):
+            return redirect(url_for('dashboard'))
+
         # Collect answers
         answers = {}
-        print ("Submission validated") # Debugging
         for subform in form.questions:
             qid = subform.question_id.data
 
@@ -102,12 +175,6 @@ def start():
                 answers[qid] = subform.answer_single.data
 
         print("Collected answers:", answers) # Debugging
-
-
-        submission = Submissions.query.filter_by(exam_id=exam.exam_id, roll_number=current_user.roll_number).order_by(Submissions.started_at.desc()).first()
-
-        if (submission.status != "IN_PROGRESS"):
-            return redirect(url_for('dashboard'))
 
         submission.answers = answers
         submission.updated_at = datetime.utcnow()
@@ -129,12 +196,15 @@ def start():
                     continue
 
                 option = Options.query.get(answers[question.question_id])
-                if option.is_correct:
+                if option and option.is_correct: # CHECK BY NOT SELECTING RADIO
                     score += question.points
 
             submission.submitted_at = datetime.utcnow()
             submission.status = "SUBMITTED"
             submission.total_score = score
+
+            session.pop('current_submission_id', None)
+            session.pop('current_exam_id', None)
             print("Exam submitted: ", answers) # Debugging
 
         db.session.commit()
