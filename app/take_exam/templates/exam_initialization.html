@@ -10,7 +10,19 @@
         <h1>{{ exam.title }}</h1>
         <h4>
             Instructor: <p>{{ instructor.name }}</p><br>
-            Time Limit: <p>X minutes</p><br>
+            Available:
+            <p>
+                {% if availability[0].date() == availability[1].date() %}
+                    {{ availability[0].strftime('%d/%m/%y') }}<br>
+                    {{ availability[0].strftime('%H:%M') }}
+                    -
+                    {{ availability[1].strftime('%H:%M') }}
+                {% else %}
+                    {{ availability[0].strftime('%d/%m/%y %H:%M') }}
+                    -
+                    {{ availability[1].strftime('%d/%m/%y %H:%M') }}
+                {% endif %}
+            </p><br>
             Security Settings:<br>
             <p>
             {% if exam.security_settings.shuffle %}
@@ -26,30 +38,39 @@
         </h4>
         <form method="POST" action="">
             {{ form.hidden_tag() }}
-            {% if exam.security_settings.password != '' %}
-                {{ form.password }}<br>
-            {% endif %}
-            {% if form.password.errors %}
-                <div class="alert alert-warning alert-dismissable" id="auto-fade-alert">
-                    <strong>Wrong password</strong>
+            {% if not exam_open %}
+                <div class="alert alert-warning">
+                    <strong>Exam is current unavailable</strong>
                 </div>
-
-                <script>
-                    setTimeout(function() {
-                        let alertBox = document.getElementById("auto-fade-alert");
-                        if (alertBox) {
-                            alertBox.style.transition = "opacity 1s ease";
-                            alertBox.style.opacity = "0";
-                            setTimeout(() => alertBox.remove(), 1000);
-                        }
-                    }, 2500);
-                </script>
-            {% endif %}
-            {% if taking_exam %}
-                {{ form.continue_submission(class="btn btn-primary") }}
+                <button type="submit" name="cancel" value="cancel" class="btn btn-primary">
+                    Go back
+                </button>
             {% else %}
-                {{ form.accept(class="btn btn-primary") }}
-                {{ form.cancel(class="btn btn-danger") }}
+                {% if exam.security_settings.password != '' %}
+                    {{ form.password }}<br>
+                {% endif %}
+                {% if form.password.errors %}
+                    <div class="alert alert-warning alert-dismissable" id="auto-fade-alert">
+                        <strong>Wrong password</strong>
+                    </div>
+
+                    <script>
+                        setTimeout(function() {
+                            let alertBox = document.getElementById("auto-fade-alert");
+                            if (alertBox) {
+                                alertBox.style.transition = "opacity 1s ease";
+                                alertBox.style.opacity = "0";
+                                setTimeout(() => alertBox.remove(), 1000);
+                            }
+                        }, 2500);
+                    </script>
+                {% endif %}
+                {% if taking_exam %}
+                    {{ form.continue_submission(class="btn btn-primary") }}
+                {% else %}
+                    {{ form.accept(class="btn btn-primary") }}
+                    {{ form.cancel(class="btn btn-danger") }}
+                {% endif %}
             {% endif %}
         </form>
     </div>

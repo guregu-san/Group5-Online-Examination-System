@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
 from flask_login import login_required, current_user
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
 from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
@@ -64,7 +65,14 @@ def initialization():
 
             taking_exam = True
 
+    # Check exam availability
+    exam_open = True
+    current_datetime = datetime.utcnow()
+    if current_datetime < exam.opens_at or current_datetime > exam.closes_at:
+        exam_open = False
+
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
+    local_tz_availability = [exam.opens_at.astimezone(ZoneInfo("localtime")), exam.closes_at.astimezone(ZoneInfo("localtime"))]
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
@@ -89,7 +97,8 @@ def initialization():
 
         return redirect(url_for('takeExamBp.start'))
 
-    return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor, taking_exam=taking_exam)
+    return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor,
+        taking_exam=taking_exam, exam_open=exam_open, availability=local_tz_availability)
 
 # Load exam
 # TODO:
