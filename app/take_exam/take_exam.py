@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
+from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session, flash
 from flask_login import login_required, current_user
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -15,8 +15,14 @@ takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  templat
 @takeExamBp.route('', methods=['GET', 'POST'])
 @login_required
 def exam_search():
+    # Check if the user is a student
+    try:
+        submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
+    except Exception:
+        flash('Instructors cannot access that page', 'danger')
+        return redirect(url_for('dashboard'))
+
     # Check for unfinished submission using the DB, and update cookies if there's one
-    submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
     if submission:
         session['current_exam_id'] = submission.exam_id
         session['current_submission_id'] = submission.submission_id
@@ -34,8 +40,6 @@ def exam_search():
     return render_template('exam_search.html', form=form)
 
 # Show exam info and prompt to start
-# TODO:
-#   - If the current datetime isn't in the exam's availability period inform user
 @takeExamBp.route('/initialization', methods=['GET', 'POST'])
 @login_required
 def initialization():
@@ -102,6 +106,7 @@ def initialization():
 
 # Load exam
 # TODO:
+#   - Implement question shuffling
 @takeExamBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
@@ -130,7 +135,7 @@ def start():
     saved_answers = submission.answers or {}
 
     # Change dictionary format
-    # Ex. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
+    # Eg. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
     saved_answers = {int(k): v for k, v in saved_answers.items()}
     is_post = request.method == 'POST'
 
@@ -168,7 +173,7 @@ def start():
         print("Submission validated") # Debugging
 
         # Once a student submits they can't change their submission, only start a new one
-        if (submission.status != "IN_PROGRESS"):
+        if submission.status != "IN_PROGRESS":
             return redirect(url_for('dashboard'))
 
         # Collect answers
@@ -203,17 +208,17 @@ def start():
                     continue
 
                 option = Options.query.get(answers[question.question_id])
-                if option and option.is_correct: # CHECK BY NOT SELECTING RADIO
+                if option and option.is_correct:
                     score += question.points
 
             submission.submitted_at = datetime.utcnow()
             submission.status = "SUBMITTED"
             submission.total_score = score
 
-            session.pop('current_submission_id', None)
-            session.pop('current_exam_id', None)
             print("Exam submitted: ", answers) # Debugging
 
+        session.pop('current_submission_id', None)
+        session.pop('current_exam_id', None)
         db.session.commit()
 
         return redirect(url_for('dashboard'))
