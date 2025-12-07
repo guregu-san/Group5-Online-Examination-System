@@ -10,6 +10,11 @@ python3 -m venv .venv
 ```
 
 ### 2) activate venv
+**On Windows (PowerShell):**
+```
+.\.venv\Scripts\Activate.ps1
+```
+**On macOS/Linux:**
 ```
 source .venv/bin/activate
 ```
