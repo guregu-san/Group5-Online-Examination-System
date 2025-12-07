@@ -11,14 +11,14 @@ takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  templat
 
 '''Routes'''
 # Find the exam
-# TODO:
-#   - Make endpoints accessible ONLY to logged-in students <3
-#   - If an exam is already in progress it should be shown to the user
 @takeExamBp.route('', methods=['GET', 'POST'])
 @login_required
 def exam_search():
-    # Check for unfinished submission using cookies
-    if session.get('current_submission_id') and session.get('current_exam_id'):
+    # Check for unfinished submission using the DB, and update cookies if there's one
+    submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
+    if submission:
+        session['current_exam_id'] = submission.exam_id
+        session['current_submission_id'] = submission.submission_id
         print("Student has unfinished submission") # Debug
         return redirect(url_for('takeExamBp.initialization'))
 
@@ -35,7 +35,6 @@ def exam_search():
 # Show exam info and prompt to start
 # TODO:
 #   - If the current datetime isn't in the exam's availability period inform user
-#   - If cancel is selected the examID cookie should get popped (cancel should be a submit button) <3
 @takeExamBp.route('/initialization', methods=['GET', 'POST'])
 @login_required
 def initialization():
@@ -94,7 +93,6 @@ def initialization():
 
 # Load exam
 # TODO:
-#   - If user is continuing submission load existing progress
 @takeExamBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
