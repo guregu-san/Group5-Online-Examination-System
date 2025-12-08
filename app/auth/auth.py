@@ -1,5 +1,5 @@
 from app import app
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_bootstrap import Bootstrap
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from app.auth.form import LoginForm, RegisterForm, bcrypt
@@ -46,6 +46,7 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     return redirect(url_for('authBp.login'))
 
 @authBp.route('/register', methods=['GET', 'POST'])
