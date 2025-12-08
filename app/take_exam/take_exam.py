@@ -1,8 +1,9 @@
 import sqlite3
 import json
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
+from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session, flash
 from flask_login import login_required, current_user
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
 from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
@@ -14,8 +15,14 @@ takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  templat
 @takeExamBp.route('', methods=['GET', 'POST'])
 @login_required
 def exam_search():
+    # Check if the user is a student
+    try:
+        submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
+    except Exception:
+        flash('Instructors cannot access that page', 'danger')
+        return redirect(url_for('dashboard'))
+
     # Check for unfinished submission using the DB, and update cookies if there's one
-    submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
     if submission:
         session['current_exam_id'] = submission.exam_id
         session['current_submission_id'] = submission.submission_id
@@ -33,8 +40,6 @@ def exam_search():
     return render_template('exam_search.html', form=form)
 
 # Show exam info and prompt to start
-# TODO:
-#   - If the current datetime isn't in the exam's availability period inform user
 @takeExamBp.route('/initialization', methods=['GET', 'POST'])
 @login_required
 def initialization():
@@ -64,7 +69,14 @@ def initialization():
 
             taking_exam = True
 
+    # Check exam availability
+    exam_open = True
+    current_datetime = datetime.utcnow()
+    if current_datetime < exam.opens_at or current_datetime > exam.closes_at:
+        exam_open = False
+
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
+    local_tz_availability = [exam.opens_at.astimezone(ZoneInfo("localtime")), exam.closes_at.astimezone(ZoneInfo("localtime"))]
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
@@ -89,10 +101,12 @@ def initialization():
 
         return redirect(url_for('takeExamBp.start'))
 
-    return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor, taking_exam=taking_exam)
+    return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor,
+        taking_exam=taking_exam, exam_open=exam_open, availability=local_tz_availability)
 
 # Load exam
 # TODO:
+#   - Implement question shuffling
 @takeExamBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
@@ -121,7 +135,7 @@ def start():
     saved_answers = submission.answers or {}
 
     # Change dictionary format
-    # Ex. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
+    # Eg. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
     saved_answers = {int(k): v for k, v in saved_answers.items()}
     is_post = request.method == 'POST'
 
@@ -159,7 +173,7 @@ def start():
         print("Submission validated") # Debugging
 
         # Once a student submits they can't change their submission, only start a new one
-        if (submission.status != "IN_PROGRESS"):
+        if submission.status != "IN_PROGRESS":
             return redirect(url_for('dashboard'))
 
         # Collect answers
@@ -194,17 +208,17 @@ def start():
                     continue
 
                 option = Options.query.get(answers[question.question_id])
-                if option and option.is_correct: # CHECK BY NOT SELECTING RADIO
+                if option and option.is_correct:
                     score += question.points
 
             submission.submitted_at = datetime.utcnow()
             submission.status = "SUBMITTED"
             submission.total_score = score
 
-            session.pop('current_submission_id', None)
-            session.pop('current_exam_id', None)
             print("Exam submitted: ", answers) # Debugging
 
+        session.pop('current_submission_id', None)
+        session.pop('current_exam_id', None)
         db.session.commit()
 
         return redirect(url_for('dashboard'))
