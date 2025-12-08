@@ -11,12 +11,23 @@
     <div class="card wide">
         {% if message %}
             <h2 class="not-graded">{{ message }}</h2>
-            <a href="/results?roll_number={{ request.args.get('roll_number') }}">Back</a>
+            {% if current_user.role == 'Instructor' %}
+            <a href="/results" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
+            {% else %}
+            <a href="/results?roll_number={{ request.args.get('roll_number') }}" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
+            {% endif %}
         {% else %}
 
             <h1>{{ exam.title }} <small>({{ exam.course_code }})</small></h1>
             {% set total_possible = total_possible if total_possible is defined else 0 %}
             <p><strong>Total Score:</strong> {% if total_score is not none %}{{ total_score }} / {{ total_possible }}{% else %}- / {{ total_possible }}{% endif %}</p>
+
+            {% if feedback %}
+            <div class="feedback-box">
+                <h2>Feedback</h2>
+                <p>{{ feedback }}</p>
+            </div>
+            {% endif %}
 
             <hr>
 
@@ -42,7 +53,11 @@
                 </div>
             {% endfor %}
 
-            <a href="/results?roll_number={{ request.args.get('roll_number') }}">Back to Results</a>
+            {% if current_user.role == 'Instructor' %}
+            <a href="/results" style="display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
+            {% else %}
+            <a href="/results?roll_number={{ request.args.get('roll_number') }}" style="display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
+            {% endif %}
 
         {% endif %}
     </div>

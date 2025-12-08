@@ -199,6 +199,25 @@ a:hover {
   border-radius: 8px;
 }
 
+.feedback-box {
+  margin-bottom: 25px;
+  padding: 15px;
+  border: 1px solid #d4af37;
+  border-left: 4px solid #d4af37;
+  border-radius: 8px;
+  background-color: #fffaf0;
+}
+
+.feedback-box h2 {
+  margin-top: 0;
+  color: #b8860b;
+}
+
+.feedback-box p {
+  color: #333;
+  margin-bottom: 0;
+}
+
 .option {
   margin-left: 25px;
 }

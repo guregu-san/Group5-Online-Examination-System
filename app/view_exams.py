@@ -1,7 +1,7 @@
 import sqlite3
 import json
 from flask import Blueprint, request, jsonify, render_template
-from flask_login import current_user
+from flask_login import current_user, login_required
 #from app import app
 
 
@@ -22,13 +22,16 @@ exam_viewBp = Blueprint('exam_view', __name__, template_folder='templates')
 
 # U6-F1: List completed exams (results) for a student
 @exam_viewBp.route('/results', methods=['GET'])
+@login_required
 def list_results():
     # Prefer current user when available:
     # - Students should only see their own results (use current_user.roll_number)
-    # - Instructors will see results for exams they own (filtered by instructor_email) when not providing a roll_number
+    # - Instructors will see results for exams they own (filtered by instructor_email) and can search by roll_number or student name
     roll_number = request.args.get('roll_number')
     course_code = request.args.get('course_code')
     instructor_name = request.args.get('instructor')
+    student_name = request.args.get('student_name')
+    student_roll = request.args.get('student_roll')
 
     # If a logged-in student is requesting results, always use their roll_number
     if current_user.is_authenticated and getattr(current_user, "role", None) == "Student":
@@ -56,38 +59,70 @@ def list_results():
             e.course_code,
             c.course_name,
             i.name AS instructor_name,
-            i.email AS instructor_email
+            i.email AS instructor_email,
+            st.name AS student_name,
+            st.roll_number
         FROM submissions s
         JOIN exams e ON e.exam_id = s.exam_id
         JOIN courses c ON c.course_code = e.course_code
         JOIN instructors i ON i.email = e.instructor_email
+        JOIN students st ON st.roll_number = s.roll_number
     """
 
     params = []
 
-    # If the user is an instructor and no roll_number was supplied, return submissions for exams they own
-    if current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor" and not roll_number:
-        query = base_select + " WHERE e.instructor_email = ? AND s.status IN ('SUBMITTED', 'GRADED')"
+    # Determine which branch to use based on current user's actual role
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor":
+        # Instructor view: show submissions for exams they own
+        query = base_select + " WHERE e.instructor_email = ? AND s.status IN ('SUBMITTED', 'GRADED', 'IN_REVIEW', 'REVIEWED')"
         params = [current_user.email]
+        
+        # Add instructor-specific search filters
+        if course_code:
+            query += " AND e.course_code LIKE ?"
+            params.append(f"%{course_code}%")
+        
+        if student_roll:
+            query += " AND s.roll_number = ?"
+            params.append(student_roll)
+        
+        if student_name:
+            query += " AND st.name LIKE ?"
+            params.append(f"%{student_name}%")
     else:
-        # For students or when roll_number is supplied, show only that student's results
-        query = base_select + " WHERE s.roll_number = ? AND s.status IN ('SUBMITTED', 'GRADED')"
+        # Student view: show only their own REVIEWED results
+        if not roll_number:
+            # If student is logged in, use their roll_number
+            roll_number = getattr(current_user, "roll_number", None)
+        
+        if not roll_number:
+            return "roll_number query parameter is required", 400
+            
+        query = base_select + " WHERE s.roll_number = ? AND s.status = 'REVIEWED'"
         params = [roll_number]
+        
+        # Add student-specific search filters
+        if course_code:
+            query += " AND e.course_code LIKE ?"
+            params.append(f"%{course_code}%")
 
-    if course_code:
-        query += " AND e.course_code LIKE ?"
-        params.append(f"%{course_code}%")
-
-    if instructor_name:
-        query += " AND i.name LIKE ?"
-        params.append(f"%{instructor_name}%")
+        if instructor_name:
+            query += " AND i.name LIKE ?"
+            params.append(f"%{instructor_name}%")
 
     query += " ORDER BY s.submitted_at DESC"
 
+    print(f"DEBUG - User role: {getattr(current_user, 'role', 'NONE')}")
+    print(f"DEBUG - Query: {query}")
+    print(f"DEBUG - Params: {params}")
+    
     cur.execute(query, params)
     rows = cur.fetchall()
     # convert rows to dicts
     results = [row_to_dict(r) for r in rows]
+    
+    print(f"DEBUG - Results count: {len(results)}")
+    
     conn.close()
 
     # HTML-view
@@ -96,7 +131,8 @@ def list_results():
         results=results,
         roll_number=roll_number,
         course_code=course_code or "",
-        instructor_name=instructor_name or ""
+        instructor_name=instructor_name or "",
+        current_user=current_user
     )
 
 
@@ -133,6 +169,7 @@ def api_list_results():
 
 # U6-F2: View single exam result (grade + answers)
 @exam_viewBp.route('/results/<int:submission_id>', methods=['GET'])
+@login_required
 def view_result_detail(submission_id):
     roll_number = request.args.get('roll_number') 
 
@@ -152,13 +189,34 @@ def view_result_detail(submission_id):
         conn.close()
         return "Submission not found", 404
 
-    if roll_number and str(sub["roll_number"]) != str(roll_number):
+    # Security checks based on user role
+    if current_user.is_authenticated:
+        if getattr(current_user, "role", None) == "Student":
+            # Students can only view their own reviewed results
+            if sub["roll_number"] != current_user.roll_number:
+                conn.close()
+                return "Not allowed to view this result", 403
+            if sub["status"] != "REVIEWED":
+                conn.close()
+                return "This exam has not been reviewed yet", 403
+        elif getattr(current_user, "role", None) == "Instructor":
+            # Instructors can view results for exams they own
+            if sub["instructor_email"] != current_user.email:
+                conn.close()
+                return "Not allowed to view this result", 403
+        else:
+            # Unknown role
+            conn.close()
+            return "Not allowed to view this result", 403
+    else:
+        # Not authenticated
         conn.close()
         return "Not allowed to view this result", 403
 
     status = sub["status"]
     exam_id = sub["exam_id"]
     total_score = sub["total_score"]
+    feedback = sub["feedback"]
     answers_json = sub["answers"] or "{}"
     answers = json.loads(answers_json)
 
@@ -176,8 +234,8 @@ def view_result_detail(submission_id):
                 continue
             answers_by_q[qid] = a
 
-    # if not graded, show message
-    if status != "GRADED":
+    # if not graded or reviewed, show message
+    if status not in ("GRADED", "REVIEWED"):
         conn.close()
         return render_template(
             'view_result_details.html',
@@ -291,6 +349,7 @@ def view_result_detail(submission_id):
         questions=list(questions.values()),
         total_score=total_score,
         total_possible=total_possible,
+        feedback=feedback,
         message=None
     )
 

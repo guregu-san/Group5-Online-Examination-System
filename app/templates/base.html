@@ -40,7 +40,7 @@
         <div class="col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
                 <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                <li><a href="{{ url_for('exam_view.list_results', roll_number=1) }}"> View Exams </a></li>
+                <li><a href="{{ url_for('exam_view.list_results') }}"> View Exams </a></li>
                     
                 {#only visible to instructors#}
                 {% if current_user.role == 'Instructor' %}
