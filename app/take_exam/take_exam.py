@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import platform
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session, flash
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -76,7 +77,17 @@ def initialization():
         exam_open = False
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
-    local_tz_availability = [exam.opens_at.astimezone(ZoneInfo("localtime")), exam.closes_at.astimezone(ZoneInfo("localtime"))]
+    
+    if platform.system() == 'Darwin':
+        local_tz = None
+    else:
+        try:
+            local_tz = ZoneInfo("localtime")
+        except Exception:
+            local_tz = None
+
+    local_tz_availability = [exam.opens_at.astimezone(local_tz), exam.closes_at.astimezone(local_tz)]
+    
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
