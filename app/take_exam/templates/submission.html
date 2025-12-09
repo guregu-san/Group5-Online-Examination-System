@@ -18,7 +18,9 @@
             <li class="border rounded">
                 {{ subform.question_id }}
                 {{ subform.single_or_multi }}
-                <h4>{{ questions[loop.index0].question_text }}</h4>
+                <h4 style="display:inline;">{{ questions[loop.index0].question_text }}</h4>
+                <h5 style="display:inline;">{{ questions[loop.index0].points }} points</h5>
+
 
                 {% if subform.single_or_multi.data == 'multi' %}
                 <div>
@@ -60,7 +62,8 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h3 id="timer">Time Left: X minutes</h3><br>
+        <h3 id="timer" data-remaining="{{ remaining_seconds }}">Time Left: --:--:--</h3><br>
+        <h3>Max Points: {{ questions | sum(attribute='points') }}</h3><br>
         <h3>Security Settings:</h3>
         <h4>
         <ul>
@@ -74,7 +77,30 @@
             <li>No tab switching allowed</li>
         {% endif %}
         </ul>
-        <h4>
+        </h4>
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let timerEl = document.getElementById("timer");
+            let remaining = parseInt(timerEl.dataset.remaining);
+
+            function update() {
+                let h = Math.floor(remaining / 3600);
+                let m = Math.floor((remaining % 3600) / 60);
+                let s = remaining % 60;
+                timerEl.textContent = `Time Left: ${h}:${m}:${s.toString().padStart(2,'0')}`;
+
+                if (remaining <= 0) {
+                    document.forms[0].submit(); // Auto-submit
+                } else {
+                    remaining--;
+                    setTimeout(update, 1000);
+                }
+            }
+
+            update();
+        });
+        </script>
     </div>
 </div>
 </div>

@@ -249,4 +249,7 @@ def start():
 
         return redirect(url_for('dashboard'))
 
-    return render_template('submission.html', form=form, exam=exam, questions=questions)
+    return render_template(
+        'submission.html', form=form, exam=exam, questions=questions,
+        remaining_seconds=int((exam.closes_at - datetime.utcnow()).total_seconds())
+    )
