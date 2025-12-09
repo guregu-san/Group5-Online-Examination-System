@@ -4,67 +4,78 @@
 {%block title%}Take Exam{%endblock%}
 
 {%block main_content%}
-<div class="card p-3">
-  <h2 class="mb-2">{{ exam.title }}</h2>
-  <p class="text-muted">Time limit: X minutes</p>
+<div class="container">
+<div class="row">
+    <div class="col-md-9">
+        <h1>{{ exam.course_code }}: {{ exam.title }}</h1>
+        <hr>
 
-  <form method="POST" action="">
-    {{ form.hidden_tag() }}
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
 
-    {# Show roll number from session (read-only) and include hidden input if available #}
-    {% if session.get('roll_number') %}
-      <div class="mb-3">
-        <label class="form-label">Roll number</label>
-        <input type="hidden" name="roll_number" value="{{ session.get('roll_number') }}">
-        <div class="form-control-plaintext">{{ session.get('roll_number') }}</div>
-      </div>
-    {% endif %}
+            <ol>
+            {% for subform in form.questions %}
+            <li class="border rounded">
+                {{ subform.question_id }}
+                {{ subform.single_or_multi }}
+                <h4>{{ questions[loop.index0].question_text }}</h4>
 
-    {% for subform in form.questions %}
-      <div class="mb-4 p-3 border rounded">
-        <div class="mb-2"><strong>Question {{ loop.index }}:</strong></div>
-        <div class="mb-2">{{ questions[loop.index0].question_text }}</div>
+                {% if subform.single_or_multi.data == 'multi' %}
+                <div>
+                    {% for opt in subform.answer_multi %}
+                    <div class="form-check">
+                        {{ opt(class="form-check-input") }}
+                        <label class="form-check-label" for="{{ opt.id }}"><strong>{{ opt.label.text }}</strong></label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div>
+                    {% for opt in subform.answer_single %}
+                    <div class="form-check">
+                        {{ opt(class="form-check-input") }}
+                        <label class="form-check-label" for="{{ opt.id }}"><strong>{{ opt.label.text }}</strong></label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-        {{ subform.question_id }}
-        {{ subform.single_or_multi }}
-
-        {% if subform.single_or_multi.data == 'multi' %}
-          <div>
-            {% for opt in subform.answer_multi %}
-              <div class="form-check">
-                {{ opt(class="form-check-input") }}
-                <label class="form-check-label" for="{{ opt.id }}">{{ opt.label.text }}</label>
-              </div>
+                {% if subform.answer_single.errors %}
+                <div class="text-danger">
+                    {% for e in subform.answer_single.errors %}{{ e }} {% endfor %}
+                </div>
+                {% endif %}
+                {% if subform.answer_multi.errors %}
+                <div class="text-danger">
+                    {% for e in subform.answer_multi.errors %}{{ e }} {% endfor %}
+                </div>
+                {% endif %}
+            </li><br>
             {% endfor %}
-          </div>
-        {% else %}
-          <div>
-            {% for opt in subform.answer_single %}
-              <div class="form-check">
-                {{ opt(class="form-check-input") }}
-                <label class="form-check-label" for="{{ opt.id }}">{{ opt.label.text }}</label>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% if subform.answer_single.errors %}
-          <div class="text-danger mt-2">
-            {% for e in subform.answer_single.errors %}{{ e }} {% endfor %}
-          </div>
-        {% endif %}
-        {% if subform.answer_multi.errors %}
-          <div class="text-danger mt-2">
-            {% for e in subform.answer_multi.errors %}{{ e }} {% endfor %}
-          </div>
-        {% endif %}
-      </div>
-    {% endfor %}
-
-    <div class="d-flex gap-2">
-      {{ form.submit(class="btn btn-primary") }}
-      {{ form.save(class="btn btn-secondary") }}
+            </ol>
+            <div class="col-md-offset-7 col-md-5">
+                {{ form.save(class="btn btn-secondary") }}
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
     </div>
-  </form>
+    <div class="col-md-3">
+        <h3 id="timer">Time Left: X minutes</h3><br>
+        <h3>Security Settings:</h3>
+        <h4>
+        <ul>
+        {% if exam.security_settings.shuffle %}
+            <li>Randomized question order</li>
+        {% endif %}
+        {% if exam.security_settings.single_session %}
+            <li>Single session only</li>
+        {% endif %}
+        {% if exam.security_settings.no_tab_switching %}
+            <li>No tab switching allowed</li>
+        {% endif %}
+        </ul>
+        <h4>
+    </div>
+</div>
 </div>
 {%endblock%}
