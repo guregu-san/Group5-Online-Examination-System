@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, jsonify, reques
 from flask_login import login_required, current_user
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import random
 
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
 from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
@@ -63,7 +64,7 @@ def initialization():
             session.pop('current_submission_id', None)
         else:
             # If there's an active submission but the exam and
-            # submission cookies don't match, the exam cookie must be fixed
+            # submission cookies don't match, the exam cookie must be updated
             if submission.exam_id != current_exam_id:
                 current_exam_id = submission.exam_id
                 session['current_exam_id'] = submission.exam_id
@@ -77,7 +78,7 @@ def initialization():
         exam_open = False
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
-    
+
     if platform.system() == 'Darwin':
         local_tz = None
     else:
@@ -87,7 +88,7 @@ def initialization():
             local_tz = None
 
     local_tz_availability = [exam.opens_at.astimezone(local_tz), exam.closes_at.astimezone(local_tz)]
-    
+
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
@@ -103,7 +104,7 @@ def initialization():
         submission = Submissions(
             exam_id = exam.exam_id,
             roll_number = current_user.roll_number,
-            started_at = datetime.utcnow(),
+            started_at = current_datetime,
             status = "IN_PROGRESS"
         )
         db.session.add(submission)
@@ -116,8 +117,6 @@ def initialization():
         taking_exam=taking_exam, exam_open=exam_open, availability=local_tz_availability)
 
 # Load exam
-# TODO:
-#   - Implement question shuffling
 @takeExamBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
@@ -141,14 +140,29 @@ def start():
         session.pop('current_submission_id', None)
         return redirect(url_for('takeExamBp.initialization'))
 
-    form = SubmissionForm()
-    questions = Questions.query.filter_by(exam_id=exam.exam_id).all()
-    saved_answers = submission.answers or {}
-
-    # Change dictionary format
-    # Eg. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
-    saved_answers = {int(k): v for k, v in saved_answers.items()}
     is_post = request.method == 'POST'
+    if not is_post:
+        questions = Questions.query.filter_by(exam_id=exam.exam_id).order_by(Questions.order_index.asc()).all()
+
+        # Shuffle on GET
+        if exam.security_settings["shuffle"]:
+            random.shuffle(questions)
+
+        # Save shuffle order
+        session["shuffled_order"] = [q.question_id for q in questions]
+    else:
+        # DO NOT reshuffle order on POST
+        ordered_ids = session.get('shuffled_order')
+        questions = Questions.query.filter(Questions.question_id.in_(ordered_ids)).all()
+
+        questions.sort(key=lambda q: ordered_ids.index(q.question_id))
+
+    # Retrieve saved answers, if any, in the correct dict format
+    # Eg. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
+    saved_answers = submission.answers or {}
+    saved_answers = {int(k): v for k, v in saved_answers.items()}
+
+    form = SubmissionForm()
 
     # Populate the dynamic form with questions
     for index, question in enumerate(questions):
@@ -230,6 +244,7 @@ def start():
 
         session.pop('current_submission_id', None)
         session.pop('current_exam_id', None)
+        session.pop('shuffled_order', None)
         db.session.commit()
 
         return redirect(url_for('dashboard'))
