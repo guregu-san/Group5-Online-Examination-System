@@ -17,7 +17,7 @@ if __name__ == "__main__":
             id="schedule_timers",
             func=set_exam_timers,
             trigger="interval",
-            seconds=5,
+            seconds=5, # Less than 1 min for testing
             replace_existing=True
         )
 

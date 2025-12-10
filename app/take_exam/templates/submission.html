@@ -6,6 +6,7 @@
 {%block main_content%}
 <div class="container">
 <div class="row">
+    <!--Left Section-->
     <div class="col-md-9">
         <h1>{{ exam.course_code }}: {{ exam.title }}</h1>
         <hr>
@@ -61,6 +62,7 @@
             </div>
         </form>
     </div>
+    <!--Right Section-->
     <div class="col-md-3">
         <h3 id="timer" data-remaining="{{ remaining_seconds }}">Time Left: --:--:--</h3><br>
         <h3>Max Points: {{ questions | sum(attribute='points') }}</h3><br>
@@ -79,10 +81,21 @@
         </ul>
         </h4>
 
+        <!--Timer-->
         <script>
         document.addEventListener("DOMContentLoaded", function () {
             let timerEl = document.getElementById("timer");
             let remaining = parseInt(timerEl.dataset.remaining);
+
+            function runAutosave() {
+                const form = document.querySelector("form");
+                const data = new FormData(form);
+
+                return fetch("{{ url_for('take_examBp.autosave') }}", {
+                    method: "POST",
+                    body: data
+                }).catch(err => console.warn("Autosave failed", err));
+            }
 
             function updateTimer() {
                 let h = Math.floor(remaining / 3600);
@@ -90,12 +103,33 @@
                 let s = remaining % 60;
                 timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
 
-                if (remaining <= 0) {
-                    document.querySelector("form").submit(); // Auto-submit
-                } else {
-                    remaining--;
-                    setTimeout(updateTimer, 1000);
+                if (remaining <= 0)
+                {
+                  timerEl.textContent = "Time Left: 0:0:0";
+
+                  // Run autosave one last time
+                  runAutosave().finally(() => {
+                      // Stop autosave interval
+                      if (window.autosaveInterval) {
+                          clearInterval(window.autosaveInterval);
+                      }
+
+                      // Disable inputs
+                      document.querySelectorAll("input, button, textarea, select")
+                          .forEach(el => el.disabled = true);
+
+                      // Show expiration popup
+                      $("#timeUpModal").modal({
+                          backdrop: "static",
+                          keyboard: false
+                      });
+                  });
+
+                  return;
                 }
+
+                remaining--;
+                setTimeout(updateTimer, 1000);
             }
 
             updateTimer();
@@ -104,17 +138,36 @@
     </div>
 </div>
 
+<!--Autosave-->
 <script>
-setInterval(() => {
-    const form = document.querySelector("form");
-    const data = new FormData(form);
-
-    fetch("{{ url_for('takeExamBp.autosave') }}", {
-        method: "POST",
-        body: data
-    }).catch(err => console.warn("Autosave failed", err));
-}, 10000);  // every 10 seconds
+window.autosaveInterval = setInterval(() => {
+    runAutosave();
+    console.warn("Autosaved")
+}, 10000);
 </script>
+
+
+<!--Expiration Notice-->
+<div class="modal fade" id="timeUpModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content" style="text-align:center;">
+      <div class="modal-header">
+        <h4 class="modal-title">Time’s Up</h4>
+      </div>
+      <div class="modal-body">
+        <p>
+            Your time for this exam has ran out.
+            Your attempt has been saved and submitted.
+        </p>
+      </div>
+      <div class="modal-footer" style="text-align:center;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+            Return to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
 </div>
 {%endblock%}

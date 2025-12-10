@@ -70,7 +70,7 @@ def finalize_submission(submission, answers, questions):
     submission.submitted_at = datetime.utcnow()
     submission.status = "SUBMITTED"
 
-    print(f"Submitted {submission.submission_id} with answers {answers}") # Debugging
+    print(f"[U5] Submitted {submission.submission_id} with answers {answers}") # Debugging
 
 
 ##### User-Accessible Routes #####
@@ -88,7 +88,7 @@ def exam_search():
     if submission:
         session['current_exam_id'] = submission.exam_id
         session['current_submission_id'] = submission.submission_id
-        print("[U5] Student has unfinished submission") # Debug
+        print("[U5] Student has unfinished submission") # Debugging
         return redirect(url_for('take_examBp.initialization'))
 
     form = ExamSearchForm()
@@ -278,32 +278,6 @@ def start():
 
         if (form.submit.data):
             finalize_submission(submission, answers, questions)
-            '''
-            # Calculate score
-            score = 0
-            for question in questions:
-                if question.is_multiple_correct:
-                    answers_are_correct = True
-                    correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
-                    for option in correct_options:
-                        if option.option_id not in answers[question.question_id]:
-                            answers_are_correct = False
-
-                    if answers_are_correct:
-                        score += question.points
-
-                    continue
-
-                option = Options.query.get(answers[question.question_id])
-                if option and option.is_correct:
-                    score += question.points
-
-            submission.submitted_at = datetime.utcnow()
-            submission.status = "SUBMITTED"
-            submission.total_score = score
-
-            print("Exam submitted: ", answers) # Debugging
-            '''
 
         session.pop('current_submission_id', None)
         session.pop('current_exam_id', None)

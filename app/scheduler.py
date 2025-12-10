@@ -1,5 +1,5 @@
 # Built-in Python import
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Local Imports
 from app import app, scheduler, db
@@ -31,7 +31,7 @@ def set_exam_timers():
     """
     APScheduler job that runs every minute.
     - Finds all exams that are currently active (opened but not yet closed)
-    - Schedules one Celery task per active exam to run at the exam's closing time
+    - Schedules one job per active exam to run at the exam's closing time
     """
     with app.app_context():
         # Get currently active exams
@@ -41,23 +41,27 @@ def set_exam_timers():
             Exams.closes_at > now
         ).all()
 
-        # Schedule a single task per active exam
         for exam in active_exams:
-            # Check if the detected exam already has a timer
             job_id = f"close_{exam.exam_id}"
             job = scheduler.get_job(job_id)
+
+            # Added delay so autosave will have time to run one last time on exam expiration
+            expiration = exam.closes_at + timedelta(seconds=5)
+
+            # If the exam doesn't already have a timer, set one,
+            # or if it has one but it doesn't match with the close time update it
             if job:
-                if job.next_run_time == exam.closes_at.replace(tzinfo=timezone.utc):
+                # Expiration time needs to be timezone-aware for the comparison
+                if job.next_run_time == expiration.replace(tzinfo=timezone.utc):
                     continue
                 scheduler.remove_job(job_id)
 
-            remaining_time = (exam.closes_at - now).total_seconds()
-            if remaining_time > 0:
+            if (exam.closes_at - now).total_seconds() > 0:
                 scheduler.add_job(
                     id=job_id,
                     func=close_exam,
                     args=[exam.exam_id],
                     trigger="date",
-                    run_date=exam.closes_at
+                    run_date=expiration
                 )
-                print(f"[Scheduler] Timer scheduled for Exam {exam.exam_id} at {exam.closes_at}(UTC)")
+                print(f"[Scheduler] Expiration scheduled for Exam {exam.exam_id} at {expiration}(UTC)")
