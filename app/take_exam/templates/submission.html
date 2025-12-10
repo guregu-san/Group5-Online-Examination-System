@@ -84,24 +84,37 @@
             let timerEl = document.getElementById("timer");
             let remaining = parseInt(timerEl.dataset.remaining);
 
-            function update() {
+            function updateTimer() {
                 let h = Math.floor(remaining / 3600);
                 let m = Math.floor((remaining % 3600) / 60);
                 let s = remaining % 60;
-                timerEl.textContent = `Time Left: ${h}:${m}:${s.toString().padStart(2,'0')}`;
+                timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
 
                 if (remaining <= 0) {
-                    document.forms[0].submit(); // Auto-submit
+                    document.querySelector("form").submit(); // Auto-submit
                 } else {
                     remaining--;
-                    setTimeout(update, 1000);
+                    setTimeout(updateTimer, 1000);
                 }
             }
 
-            update();
+            updateTimer();
         });
         </script>
     </div>
 </div>
+
+<script>
+setInterval(() => {
+    const form = document.querySelector("form");
+    const data = new FormData(form);
+
+    fetch("{{ url_for('takeExamBp.autosave') }}", {
+        method: "POST",
+        body: data
+    }).catch(err => console.warn("Autosave failed", err));
+}, 10000);  // every 10 seconds
+</script>
+
 </div>
 {%endblock%}

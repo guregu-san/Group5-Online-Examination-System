@@ -1,4 +1,6 @@
-from app import app
+import os
+from app import app, scheduler
+from app.scheduler import set_exam_timers
 
 
 #----------------------------------------
@@ -9,4 +11,17 @@ from app import app
 print(app.url_map)
 
 if __name__ == "__main__":
-	app.run(debug=True, port=5001)
+    # Necessary guard to avoid duplicate schedulers when running in debug mode
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        scheduler.add_job(
+            id="schedule_timers",
+            func=set_exam_timers,
+            trigger="interval",
+            seconds=5,
+            replace_existing=True
+        )
+
+        scheduler.start()
+        print("[Scheduler] Started")
+
+    app.run(debug=True, port=5001)
