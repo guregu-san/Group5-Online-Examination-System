@@ -51,7 +51,7 @@
         '<li class="list-group-item text-center">Loading...</li>';
 
       const url =
-        "http://localhost:5000/grading/dashboard/" +
+        "http://127.0.0.1:5000/grading/dashboard/" +
         encodeURIComponent(email);
 
       try {
@@ -102,7 +102,7 @@
     // Button click
     loadBtn.addEventListener("click", loadDashboard);
 
-    // Initial load, like useEffect([]) in React
+ 
     loadDashboard();
   });
 </script>
