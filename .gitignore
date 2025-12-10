@@ -10,4 +10,5 @@ __pycache__/
 oesDB.db
 instance/
 oesDB.db
-.env
+.env__pycache__/
+*.pyc

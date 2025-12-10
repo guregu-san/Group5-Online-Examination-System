@@ -9,22 +9,34 @@
     <h1 class="text-center">{{ exam['title'] }}</h1>
 
     <div class="d-flex justify-content-center my-3">
-      <div class="mx-3">
-        <strong>Time Limit:</strong>
-        {{ exam['time_limit'] if exam['time_limit'] else "Not set" }}
-        <a href="{{ url_for('examBp.set_time_limit_ui', exam_id=exam['exam_id']) }}" class="btn btn-secondary btn-sm ml-2">
-          Configure
-        </a>
+      
+      <!-- Opens/Closes At -->
+      <div class="mx-3 text-center">
+        <strong>Opens At:</strong><br>
+        {{ exam['opens_at'] if exam['opens_at'] else "Not set" }}
       </div>
-      <div class="mx-3">
-        <strong>Security:</strong>
+
+      <div class="mx-3 text-center">
+        <strong>Closes At:</strong><br>
+        {{ exam['closes_at'] if exam['closes_at'] else "Not set" }}
+      </div>
+
+      <!-- Security -->
+      <div class="mx-3 text-center">
+        <strong>Security:</strong><br>
         {{ exam['security_settings'] or "Not set" }}
-        <a href="{{ url_for('examBp.set_security_ui', exam_id=exam['exam_id']) }}" class="btn btn-secondary btn-sm ml-2">
+        <br>
+        <a href="{{ url_for('examBp.set_security_ui', exam_id=exam['exam_id']) }}" 
+           class="btn btn-secondary btn-sm mt-1">
           Edit
         </a>
       </div>
+
     </div>
 
+    <hr>
+
+    <!-- Questions Table -->
     <table class="table table-striped mt-3">
       <thead>
         <tr>
@@ -41,19 +53,26 @@
           <td>{{ q['question_text'] }}</td>
           <td>{{ "Multiple Correct" if q['is_multiple_correct'] else "Single Correct" }}</td>
           <td>
-            <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id'], question_id=q['question_id']) }}" class="btn btn-light btn-sm">Edit</a>
-            <!-- Drag/reorder could be JS later; for now keep static -->
+            <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id'], question_id=q['question_id']) }}" 
+               class="btn btn-light btn-sm">
+              Edit
+            </a>
+            <!-- Reordering button could be added later -->
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
 
+    <!-- Footer Buttons -->
     <div class="text-center mt-4">
-      <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id']) }}" class="btn btn-primary mr-2">
+      <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id']) }}" 
+         class="btn btn-primary mr-2">
         Add Question +
       </a>
-      <a href="{{ url_for('examBp.preview_exam_ui', exam_id=exam['exam_id']) }}" class="btn btn-secondary">
+
+      <a href="{{ url_for('examBp.preview_exam_ui', exam_id=exam['exam_id']) }}" 
+         class="btn btn-secondary">
         Preview Exam
       </a>
     </div>

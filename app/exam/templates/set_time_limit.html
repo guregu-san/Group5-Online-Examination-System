@@ -1,26 +1,43 @@
 {% extends "base.html" %}
 
-{% block title %}Set Time Limit{% endblock %}
+{% block title %}Set Exam Availability{% endblock %}
 
 {% block main_content %}
 <div class="overlay-card-container">
   <div class="overlay-card">
-    <h3 class="text-center">Set Time Limit</h3>
-    <p class="text-center">Enter time limit (in minutes):</p>
+
+    <h3 class="text-center">Set Exam Availability</h3>
+    <p class="text-center">Choose when the exam opens and closes:</p>
 
     <form method="POST" action="">
-      <input type="number"
-             name="time_limit"
-             class="form-control text-center"
-             min="1"
-             value="{{ exam['time_limit'] or '' }}"
-             style="max-width: 120px; margin: 0 auto 20px auto;">
+
+      <!-- Opens At -->
+      <div class="form-group text-center mb-3">
+        <label><strong>Opens At:</strong></label>
+        <input type="datetime-local"
+               name="opens_at"
+               class="form-control text-center"
+               value="{{ exam['opens_at'] }}"
+               style="max-width: 250px; margin: 0 auto;">
+      </div>
+
+      <!-- Closes At -->
+      <div class="form-group text-center mb-4">
+        <label><strong>Closes At:</strong></label>
+        <input type="datetime-local"
+               name="closes_at"
+               class="form-control text-center"
+               value="{{ exam['closes_at'] }}"
+               style="max-width: 250px; margin: 0 auto;">
+      </div>
 
       <div class="text-center">
         <button type="submit" class="btn btn-primary mr-2">Save</button>
         <a href="{{ url_for('examBp.edit_exam_ui', exam_id=exam_id) }}" class="btn btn-secondary">Exit</a>
       </div>
+
     </form>
+
   </div>
 </div>
 {% endblock %}

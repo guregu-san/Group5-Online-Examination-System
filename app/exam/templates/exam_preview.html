@@ -8,9 +8,16 @@
 
     <h1>{{ exam['title'] }}</h1>
 
-    <p>Time Limit: {{ exam['time_limit'] if exam['time_limit'] else 'Not set' }} min</p>
-    <p>Security: {{ exam['security_settings'] or 'Not set' }}</p>
+    <!-- New timing fields -->
+    <p><strong>Opens At:</strong> {{ exam['opens_at'] if exam['opens_at'] else "Not set" }}</p>
+    <p><strong>Closes At:</strong> {{ exam['closes_at'] if exam['closes_at'] else "Not set" }}</p>
 
+    <!-- Security -->
+    <p><strong>Security:</strong> {{ exam['security_settings'] or "Not set" }}</p>
+
+    <hr>
+
+    <!-- Questions -->
     <div class="mt-4 text-left" style="display:inline-block;">
       {% for q in questions %}
         <p><strong>{{ q['order_index'] }}.</strong> {{ q['question_text'] }}</p>
