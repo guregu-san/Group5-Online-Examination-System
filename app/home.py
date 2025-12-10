@@ -14,12 +14,6 @@ def home():
 def dashboard():
     return render_template('dashboard.html', user=current_user)
 
-'''
-@app.route('/take_exam', methods=['GET', 'POST'])
-def takeExam():
-    return render_template('submission.html')
-'''
-
 @app.route('/home', methods=['GET'])
 def homePage():
     return render_template('home.html')

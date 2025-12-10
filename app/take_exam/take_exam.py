@@ -1,35 +1,95 @@
-import sqlite3
-import json
+"""
+U5: Exam Taking
+
+This module provides the functionality for students to search for, and take
+examinations created by instructors within the Online Examination System (OES).
+
+Functionalities:
+- Exam search: Allows students to look up exams by ID.
+- Exam initialization: Aalidates exam availability, handles ongoing submissions,
+  and sets up a new submission session.
+- Exam taking: Presents questions in the in the order the given by the instructor,
+  or in a randomzied one, allows student to submit or save and exit.
+- Autosave functionality: Periodically saves in-progress submissions to the database.
+- Submission finalization: Automatically grades the submission, and updates its relevant
+  information in the database
+
+Blueprint:
+- `take_examBp` handles all exam-related routes under the URL prefix `/take_exam`.
+
+Dependencies:
+- Flask and Flask-Login for web routing, session management, and user authentication.
+- SQLAlchemy ORM models for interacting with the database.
+- Python standard libraries for date/time handling and platform-specific adjustments.
+"""
+
+# Third-party imports
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required
+
+# Built-in Python imports
 import platform
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session, flash
-from flask_login import login_required, current_user
+import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import random
 
+# Local Imports
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
-from app.models import db, Students, Instructors, Courses, Exams, Questions, Options, Submissions
+from app.models import db, Instructors, Exams, Questions, Options, Submissions
 
-takeExamBp = Blueprint("takeExamBp", __name__, url_prefix="/take_exam",  template_folder="templates")
+# Instantiate blueprint
+take_examBp = Blueprint("take_examBp", __name__, url_prefix="/take_exam",  template_folder="templates")
 
-'''Routes'''
-# Find the exam
-@takeExamBp.route('', methods=['GET', 'POST'])
+# Helper function
+def finalize_submission(submission, answers, questions):
+    """
+    - Calculation submission score
+    - Sets score, time of submission, and changes status
+    - Updates database
+    """
+
+    score = 0
+    for question in questions:
+        if question.is_multiple_correct:
+            answers_are_correct = True
+            correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
+            for option in correct_options:
+                if option.option_id not in answers[question.question_id]:
+                    answers_are_correct = False
+
+            if answers_are_correct:
+                score += question.points
+
+            continue
+
+        option = Options.query.get(answers[question.question_id])
+        if option and option.is_correct:
+            score += question.points
+
+    submission.total_score = score
+    submission.submitted_at = datetime.utcnow()
+    submission.status = "SUBMITTED"
+
+    print(f"[U5] Submitted {submission.submission_id} with answers {answers}") # Debugging
+
+
+##### User-Accessible Routes #####
+@take_examBp.route('', methods=['GET', 'POST'])
 @login_required
 def exam_search():
     # Check if the user is a student
     try:
         submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
     except Exception:
-        flash('Instructors cannot access that page', 'danger')
+        flash('Instructors cannot access the requested page', 'danger')
         return redirect(url_for('dashboard'))
 
     # Check for unfinished submission using the DB, and update cookies if there's one
     if submission:
         session['current_exam_id'] = submission.exam_id
         session['current_submission_id'] = submission.submission_id
-        print("Student has unfinished submission") # Debug
-        return redirect(url_for('takeExamBp.initialization'))
+        print("[U5] Student has unfinished submission") # Debugging
+        return redirect(url_for('take_examBp.initialization'))
 
     form = ExamSearchForm()
     if form.validate_on_submit():
@@ -37,23 +97,23 @@ def exam_search():
 
         # Save searched-for exam
         session['current_exam_id'] = exam.exam_id
-        return redirect(url_for('takeExamBp.initialization'))
+        return redirect(url_for('take_examBp.initialization'))
 
     return render_template('exam_search.html', form=form)
 
-# Show exam info and prompt to start
-@takeExamBp.route('/initialization', methods=['GET', 'POST'])
+
+@take_examBp.route('/initialization', methods=['GET', 'POST'])
 @login_required
 def initialization():
     # Validate exam cookie
     current_exam_id = session.get('current_exam_id')
     if not current_exam_id:
-        return redirect(url_for('takeExamBp.exam_search'))
+        return redirect(url_for('take_examBp.exam_search'))
 
     exam = Exams.query.get(current_exam_id)
     if not exam:
         session.pop('current_exam_id', None)
-        return redirect(url_for('takeExamBp.exam_search'))
+        return redirect(url_for('take_examBp.exam_search'))
 
     # Check if student has an unfinished submission
     taking_exam = False
@@ -93,12 +153,12 @@ def initialization():
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
         if form.continue_submission.data:
-            return redirect(url_for('takeExamBp.start'))
+            return redirect(url_for('take_examBp.start'))
 
         if form.cancel.data:
             # Remove the exam cookie if user declines to start exam
             session.pop('current_exam_id', None)
-            return redirect(url_for('takeExamBp.exam_search'))
+            return redirect(url_for('take_examBp.exam_search'))
 
         # Initialize submission and store it in the database + as a cookie
         submission = Submissions(
@@ -111,34 +171,34 @@ def initialization():
         db.session.commit()
         session['current_submission_id'] = submission.submission_id
 
-        return redirect(url_for('takeExamBp.start'))
+        return redirect(url_for('take_examBp.start'))
 
     return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor,
         taking_exam=taking_exam, exam_open=exam_open, availability=local_tz_availability)
 
-# Load exam
-@takeExamBp.route('/start', methods=['GET', 'POST'])
+
+@take_examBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
     # Validate exam cookie
     current_exam_id = session.get('current_exam_id')
     if not current_exam_id:
-        return redirect(url_for('takeExamBp.exam_search'))
+        return redirect(url_for('take_examBp.exam_search'))
 
     exam = Exams.query.get(current_exam_id)
     if not exam:
         session.pop('current_exam_id', None)
-        return redirect(url_for('takeExamBp.exam_search'))
+        return redirect(url_for('take_examBp.exam_search'))
 
     # Validate submission cookie
     current_submission_id = session.get('current_submission_id')
     if not current_submission_id:
-        return redirect(url_for('takeExamBp.initialization'))
+        return redirect(url_for('take_examBp.initialization'))
 
     submission = Submissions.query.get(current_submission_id)
     if (not submission):
         session.pop('current_submission_id', None)
-        return redirect(url_for('takeExamBp.initialization'))
+        return redirect(url_for('take_examBp.initialization'))
 
     is_post = request.method == 'POST'
     if not is_post:
@@ -191,11 +251,11 @@ def start():
             if not is_post and question.question_id in saved_answers:
                 subform.answer_single.data = saved_answers[question.question_id]
 
-        print("Added question", question.question_id, "with choices", choices) # Debugging
+        print(f"[U5] Added question {question.question_id} with choices {choices}") # Debugging
 
 
     if form.validate_on_submit():
-        print("Submission validated") # Debugging
+        print("[U5] Submission form validated") # Debugging
 
         # Once a student submits they can't change their submission, only start a new one
         if submission.status != "IN_PROGRESS":
@@ -211,36 +271,13 @@ def start():
             else:
                 answers[qid] = subform.answer_single.data
 
-        print("Collected answers:", answers) # Debugging
+        print(f"[U5] Collected answers: {answers}") # Debugging
 
         submission.answers = answers
         submission.updated_at = datetime.utcnow()
 
         if (form.submit.data):
-            # Calculate score
-            score = 0
-            for question in questions:
-                if question.is_multiple_correct:
-                    answers_are_correct = True
-                    correct_options = Options.query.filter_by(question_id=question.question_id, is_correct=True).all()
-                    for option in correct_options:
-                        if option.option_id not in answers[question.question_id]:
-                            answers_are_correct = False
-
-                    if answers_are_correct:
-                        score += question.points
-
-                    continue
-
-                option = Options.query.get(answers[question.question_id])
-                if option and option.is_correct:
-                    score += question.points
-
-            submission.submitted_at = datetime.utcnow()
-            submission.status = "SUBMITTED"
-            submission.total_score = score
-
-            print("Exam submitted: ", answers) # Debugging
+            finalize_submission(submission, answers, questions)
 
         session.pop('current_submission_id', None)
         session.pop('current_exam_id', None)
@@ -253,3 +290,31 @@ def start():
         'submission.html', form=form, exam=exam, questions=questions,
         remaining_seconds=int((exam.closes_at - datetime.utcnow()).total_seconds())
     )
+
+
+##### User-Innacessible Route #####
+@take_examBp.route("/autosave", methods=["POST"])
+@login_required
+def autosave():
+    submission_id = session.get("current_submission_id")
+    if not submission_id:
+        return ("no submission", 400)
+
+    submission = Submissions.query.get(submission_id)
+    if not submission or submission.status != "IN_PROGRESS":
+        return ("invalid", 400)
+
+    form = SubmissionForm()
+    answers = {}
+
+    for subform in form.questions:
+        qid = subform.question_id.data
+        if subform.single_or_multi.data == "multi":
+            answers[qid] = subform.answer_multi.data
+        else:
+            answers[qid] = subform.answer_single.data
+
+    submission.answers = answers
+    submission.updated_at = datetime.utcnow()
+    db.session.commit()
+    return ("ok", 200)
