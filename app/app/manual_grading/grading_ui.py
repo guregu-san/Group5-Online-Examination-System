@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 
-# This blueprint is ONLY for HTML pages (UI)
+
 gradingUiBp = Blueprint(
     "gradingUiBp",
     __name__,
