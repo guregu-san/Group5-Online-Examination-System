@@ -30,7 +30,7 @@ from flask_login import current_user, login_required
 # Built-in Python imports
 import platform
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 # Local Imports
@@ -43,7 +43,7 @@ take_examBp = Blueprint("take_examBp", __name__, url_prefix="/take_exam",  templ
 # Helper function
 def finalize_submission(submission, answers, questions):
     """
-    - Calculation submission score
+    - Calculates submission score
     - Sets score, time of submission, and changes status
     - Updates database
     """
@@ -139,6 +139,7 @@ def initialization():
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
 
+    '''
     if platform.system() == 'Darwin':
         local_tz = None
     else:
@@ -148,6 +149,10 @@ def initialization():
             local_tz = None
 
     local_tz_availability = [exam.opens_at.astimezone(local_tz), exam.closes_at.astimezone(local_tz)]
+    '''
+
+    tz_aware_dates = [exam.opens_at.replace(tzinfo=ZoneInfo("UTC")), exam.closes_at.replace(tzinfo=ZoneInfo("UTC"))]
+    print(f"[U5] Exam window: {tz_aware_dates[0]} until {tz_aware_dates[1]}")
 
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
@@ -174,7 +179,7 @@ def initialization():
         return redirect(url_for('take_examBp.start'))
 
     return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor,
-        taking_exam=taking_exam, exam_open=exam_open, availability=local_tz_availability)
+        taking_exam=taking_exam, exam_open=exam_open, availability=tz_aware_dates)
 
 
 @take_examBp.route('/start', methods=['GET', 'POST'])

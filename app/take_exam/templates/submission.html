@@ -84,8 +84,7 @@
         <!--Timer-->
         <script>
         document.addEventListener("DOMContentLoaded", function () {
-            let timerEl = document.getElementById("timer");
-            let remaining = parseInt(timerEl.dataset.remaining);
+            const form = document.querySelector("form");
 
             function runAutosave() {
                 const form = document.querySelector("form");
@@ -97,39 +96,46 @@
                 }).catch(err => console.warn("Autosave failed", err));
             }
 
+            // Run autosave every 10 seconds
+            window.autosaveInterval = setInterval(() => {
+                runAutosave().then(() => console.log("Autosaved"));
+            }, 10000);
+
+            let timerEl = document.getElementById("timer");
+            let remaining = parseInt(timerEl.dataset.remaining);
+
             function updateTimer() {
-                let h = Math.floor(remaining / 3600);
-                let m = Math.floor((remaining % 3600) / 60);
-                let s = remaining % 60;
-                timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
+              let h = Math.floor(remaining / 3600);
+              let m = Math.floor((remaining % 3600) / 60);
+              let s = remaining % 60;
+              timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
 
-                if (remaining <= 0)
-                {
-                  timerEl.textContent = "Time Left: 0:0:0";
+              if (remaining <= 0) {
+                timerEl.textContent = "Time Left: 0:0:0";
 
-                  // Run autosave one last time
-                  runAutosave().finally(() => {
-                      // Stop autosave interval
-                      if (window.autosaveInterval) {
-                          clearInterval(window.autosaveInterval);
-                      }
+                // Run autosave one last time
+                runAutosave().finally(() => {
+                    // Stop autosave interval
+                    if (window.autosaveInterval) {
+                        clearInterval(window.autosaveInterval);
+                    }
 
-                      // Disable inputs
-                      document.querySelectorAll("input, button, textarea, select")
-                          .forEach(el => el.disabled = true);
+                    // Disable inputs
+                    document.querySelectorAll("input, button, textarea, select")
+                        .forEach(el => el.disabled = true);
 
-                      // Show expiration popup
-                      $("#timeUpModal").modal({
-                          backdrop: "static",
-                          keyboard: false
-                      });
-                  });
+                    // Show expiration popup
+                    $("#timeUpModal").modal({
+                        backdrop: "static",
+                        keyboard: false
+                    });
+                });
 
-                  return;
-                }
+                return;
+              }
 
-                remaining--;
-                setTimeout(updateTimer, 1000);
+              remaining--;
+              setTimeout(updateTimer, 1000);
             }
 
             updateTimer();

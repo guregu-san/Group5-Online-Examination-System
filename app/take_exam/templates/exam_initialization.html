@@ -12,6 +12,9 @@
             Instructor: <p>{{ instructor.name }}</p><br>
             Available:
             <p>
+            <span id="availability-display"
+            data-open="{{ availability[0].isoformat() | safe }}"
+            data-close="{{ availability[1].isoformat() | safe }}">
                 {% if availability[0].date() == availability[1].date() %}
                     {{ availability[0].strftime('%d/%m/%y') }}<br>
                     {{ availability[0].strftime('%H:%M') }}
@@ -22,7 +25,32 @@
                     -
                     {{ availability[1].strftime('%d/%m/%y %H:%M') }}
                 {% endif %}
+            </span>
             </p><br>
+
+            <!-- Date Formatter-->
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    const el = document.getElementById("availability-display");
+                    if (!el) return;
+
+                    const open = new Date(el.dataset.open);
+                    const close = new Date(el.dataset.close);
+
+                    const fd = d => d.toLocaleDateString("en-GB"); // dd/mm/yyyy
+                    const ft = d => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+
+                    const sameDay =
+                        open.getFullYear() === close.getFullYear() &&
+                        open.getMonth() === close.getMonth() &&
+                        open.getDate() === close.getDate();
+
+                    el.innerHTML = sameDay
+                        ? `${fd(open)}<br>${ft(open)} - ${ft(close)}`
+                        : `${fd(open)} ${ft(open)} - ${fd(close)} ${ft(close)}`;
+                });
+            </script>
+
             Security Settings:<br>
             <p>
             {% if exam.security_settings.shuffle %}
