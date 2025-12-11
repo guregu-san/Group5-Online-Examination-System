@@ -281,7 +281,7 @@ def start():
         submission.answers = answers
         submission.updated_at = datetime.utcnow()
 
-        if (form.submit.data):
+        if (form.submit_flag.data == "1"):
             finalize_submission(submission, answers, questions)
 
         session.pop('current_submission_id', None)

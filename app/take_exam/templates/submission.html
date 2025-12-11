@@ -13,6 +13,7 @@
 
         <form method="POST" action="">
             {{ form.hidden_tag() }}
+            {{ form.submit_flag }}
 
             <ol>
             {% for subform in form.questions %}
@@ -58,10 +59,11 @@
             </ol>
             <div class="col-md-offset-7 col-md-5">
                 {{ form.save(class="btn btn-secondary") }}
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="button" class="btn btn-primary" id="submitBtn">Submit</button>
             </div>
         </form>
     </div>
+
     <!--Right Section-->
     <div class="col-md-3">
         <h3 id="timer" data-remaining="{{ remaining_seconds }}">Time Left: --:--:--</h3><br>
@@ -81,79 +83,105 @@
         </ul>
         </h4>
 
-        <!--Timer-->
+        <!--stuff from here and bellow was made with A LOT of help from chat-->
+        <!--Timer+Autosave+Confirmation-->
         <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.querySelector("form");
-
-            function runAutosave() {
+            document.addEventListener("DOMContentLoaded", function () {
                 const form = document.querySelector("form");
-                const data = new FormData(form);
+                const submitBtn = document.getElementById("submitBtn");
+                const confirmBtn = document.getElementById("confirmSubmit");
+                const cancelBtn = document.getElementById("cancelSubmit");
+                const modal = document.getElementById("submitConfirmModal");
 
-                return fetch("{{ url_for('take_examBp.autosave') }}", {
-                    method: "POST",
-                    body: data
-                }).catch(err => console.warn("Autosave failed", err));
-            }
-
-            // Run autosave every 10 seconds
-            window.autosaveInterval = setInterval(() => {
-                runAutosave().then(() => console.log("Autosaved"));
-            }, 10000);
-
-            let timerEl = document.getElementById("timer");
-            let remaining = parseInt(timerEl.dataset.remaining);
-
-            function updateTimer() {
-              let h = Math.floor(remaining / 3600);
-              let m = Math.floor((remaining % 3600) / 60);
-              let s = remaining % 60;
-              timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
-
-              if (remaining <= 0) {
-                timerEl.textContent = "Time Left: 0:0:0";
-
-                // Run autosave one last time
-                runAutosave().finally(() => {
-                    // Stop autosave interval
-                    if (window.autosaveInterval) {
-                        clearInterval(window.autosaveInterval);
-                    }
-
-                    // Disable inputs
-                    document.querySelectorAll("input, button, textarea, select")
-                        .forEach(el => el.disabled = true);
-
-                    // Show expiration popup
-                    $("#timeUpModal").modal({
-                        backdrop: "static",
-                        keyboard: false
-                    });
+                submitBtn.addEventListener("click", () => {
+                    modal.style.display = "flex";
                 });
 
-                return;
-              }
+                cancelBtn.addEventListener("click", () => {
+                    modal.style.display = "none";
+                });
 
-              remaining--;
-              setTimeout(updateTimer, 1000);
-            }
+                confirmBtn.addEventListener("click", () => {
+                    document.getElementById("submit_flag").value = "1";
+                    form.submit();
+                });
 
-            updateTimer();
-        });
+                function runAutosave() {
+                    const form = document.querySelector("form");
+                    const data = new FormData(form);
+
+                    return fetch("{{ url_for('take_examBp.autosave') }}", {
+                        method: "POST",
+                        body: data
+                    }).catch(err => console.warn("Autosave failed", err));
+                }
+
+                // Run autosave every 10 seconds
+                window.autosaveInterval = setInterval(() => {
+                    runAutosave().then(() => console.log("Autosaved"));
+                }, 10000);
+
+                let timerEl = document.getElementById("timer");
+                let remaining = parseInt(timerEl.dataset.remaining);
+
+                function updateTimer() {
+                    let h = Math.floor(remaining / 3600);
+                    let m = Math.floor((remaining % 3600) / 60);
+                    let s = remaining % 60;
+
+                    h = String(h).padStart(2, '0');
+                    m = String(m).padStart(2, '0');
+                    s = String(s).padStart(2, '0');
+
+                    timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
+
+                    if (remaining <= 0) {
+                      timerEl.textContent = "Time Left: 0:0:0";
+
+                      // Run autosave one last time
+                      runAutosave().finally(() => {
+                          // Stop autosave interval
+                          if (window.autosaveInterval) {
+                              clearInterval(window.autosaveInterval);
+                          }
+
+                          // Disable inputs
+                          document.querySelectorAll("input, button, textarea, select")
+                              .forEach(el => el.disabled = true);
+
+                          // Show expiration popup
+                          $("#timeUpModal").modal({
+                              backdrop: "static",
+                              keyboard: false
+                          });
+                      });
+
+                      return;
+                  }
+
+                  remaining--;
+                  setTimeout(updateTimer, 1000);
+                }
+
+                updateTimer();
+            });
         </script>
     </div>
 </div>
 
-<!--Autosave-->
-<script>
-window.autosaveInterval = setInterval(() => {
-    runAutosave();
-    console.warn("Autosaved")
-}, 10000);
-</script>
 
+<!--Confirmation Popup-->
+<div id="submitConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:20px; border-radius:5px; max-width:400px; margin:auto; text-align:center;">
+    <h4>Confirm Submission</h4>
+    <p>Are you sure you want to submit your exam? Once submitted, you cannot make changes.</p>
+    <button type="button" class="btn btn-default" id="cancelSubmit">Cancel</button>
+    <button type="button" class="btn btn-primary" id="confirmSubmit">Confirm</button>
+  </div>
+</div>
 
-<!--Expiration Notice-->
+<!--Expiration Popup-->
 <div class="modal fade" id="timeUpModal" tabindex="-1" role="dialog">
   <div class="modal-dialog modal-sm" role="document">
     <div class="modal-content" style="text-align:center;">

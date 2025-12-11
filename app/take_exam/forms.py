@@ -67,6 +67,6 @@ class QuestionAnswerForm(Form):
 
 class SubmissionForm(FlaskForm):
     """Top-level submission form with a dynamic list of questions."""
+    submit_flag = HiddenField(default="0")
     questions = FieldList(FormField(QuestionAnswerForm), min_entries=1)
-    submit = SubmitField('Submit')
     save = SubmitField('Save and Exit')
