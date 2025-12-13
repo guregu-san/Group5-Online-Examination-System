@@ -292,34 +292,48 @@ def start():
         return redirect(url_for('dashboard'))
 
     return render_template(
-        'submission.html', form=form, exam=exam, questions=questions,
+        'submission.html', form=form, exam=exam, questions=questions, feedback=submission.feedback,
         remaining_seconds=int((exam.closes_at - datetime.utcnow()).total_seconds())
     )
 
 
-##### User-Innacessible Route #####
+##### User-Innacessible Endpoint #####
 @take_examBp.route("/autosave", methods=["POST"])
 @login_required
 def autosave():
     submission_id = session.get("current_submission_id")
     if not submission_id:
-        return ("no submission", 400)
+        return ("no active submission", 400)
 
     submission = Submissions.query.get(submission_id)
     if not submission or submission.status != "IN_PROGRESS":
-        return ("invalid", 400)
+        return ("invalid submission", 400)
 
-    form = SubmissionForm()
-    answers = {}
+    save_type = request.form.get("autosave_type")
 
-    for subform in form.questions:
-        qid = subform.question_id.data
-        if subform.single_or_multi.data == "multi":
-            answers[qid] = subform.answer_multi.data
+    if save_type == "progress":
+        form = SubmissionForm()
+        answers = {}
+
+        for subform in form.questions:
+            qid = subform.question_id.data
+            if subform.single_or_multi.data == "multi":
+                answers[qid] = subform.answer_multi.data
+            else:
+                answers[qid] = subform.answer_single.data
+
+        submission.answers = answers
+    elif save_type == "report":
+        feedback = request.form.get("feedback")
+
+        if feedback:
+            submission.feedback = feedback
         else:
-            answers[qid] = subform.answer_single.data
+            return ("missing feedback", 400)
+    else:
+        return ("unknown autosave type", 400)
 
-    submission.answers = answers
     submission.updated_at = datetime.utcnow()
     db.session.commit()
-    return ("ok", 200)
+    print(f"[U5] Autosaved {save_type} for submission {submission_id}")
+    return ("autosaved", 200)

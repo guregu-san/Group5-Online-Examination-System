@@ -66,6 +66,16 @@
 
     <!--Right Section-->
     <div class="col-md-3">
+        <!--Tab Switch Warning-->
+        <div class="alert alert-danger alert-dismissable" id="auto-fade-warning" style="display:none;">
+            <strong>WARNING: Tab switching is prohibited! Any further switches will be reported.</strong>
+        </div>
+
+        <!--Tab Switch Report-->
+        <div class="alert alert-danger alert-dismissable" id="auto-fade-report" style="display:none;">
+            <strong>WARNING: Tab switch reported!</strong>
+        </div>
+
         <h3 id="timer" data-remaining="{{ remaining_seconds }}">Time Left: --:--:--</h3><br>
         <h3>Max Points: {{ questions | sum(attribute='points') }}</h3><br>
         <h3>Security Settings:</h3>
@@ -84,7 +94,7 @@
         </h4>
 
         <!--stuff from here and bellow was made with A LOT of help from chat-->
-        <!--Timer+Autosave+Confirmation-->
+        <!--Timer+Autosave+Confirmation+Tab Switch Detection-->
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const form = document.querySelector("form");
@@ -92,23 +102,32 @@
                 const confirmBtn = document.getElementById("confirmSubmit");
                 const cancelBtn = document.getElementById("cancelSubmit");
                 const modal = document.getElementById("submitConfirmModal");
+                let timerEl = document.getElementById("timer");
+                let feedback = {{ (feedback or "") | tojson }};
+                const tab_switch_detection_enabled = {{ exam.security_settings.no_tab_switching | tojson }};
+                console.log("Exam script loaded");
 
-                submitBtn.addEventListener("click", () => {
-                    modal.style.display = "flex";
-                });
+                /* Submission Confirmation Behavior */
+                if (submitBtn && cancelBtn && confirmBtn) {
+                    submitBtn.addEventListener("click", () => modal.style.display = "flex");
+                    cancelBtn.addEventListener("click", () => modal.style.display = "none");
 
-                cancelBtn.addEventListener("click", () => {
-                    modal.style.display = "none";
-                });
-
-                confirmBtn.addEventListener("click", () => {
-                    document.getElementById("submit_flag").value = "1";
-                    form.submit();
-                });
-
-                function runAutosave() {
-                    const form = document.querySelector("form");
-                    const data = new FormData(form);
+                    confirmBtn.addEventListener("click", () => {
+                        document.getElementById("submit_flag").value = "1";
+                        form.submit();
+                    });
+                }
+                /* Autosave Definition */
+                function autosave(type, payload = null) {
+                    let data;
+                    if (type === "progress") {
+                        data = new FormData(form);
+                    }
+                    else {
+                        data = new FormData();
+                        data.append("feedback", payload);
+                    }
+                    data.append("autosave_type", type);
 
                     return fetch("{{ url_for('take_examBp.autosave') }}", {
                         method: "POST",
@@ -116,13 +135,13 @@
                     }).catch(err => console.warn("Autosave failed", err));
                 }
 
-                // Run autosave every 10 seconds
+                /* Periodic Autosave */
                 window.autosaveInterval = setInterval(() => {
-                    runAutosave().then(() => console.log("Autosaved"));
+                    autosave("progress").then(() => console.log("Autosaved"));
                 }, 10000);
 
-                let timerEl = document.getElementById("timer");
-                let remaining = parseInt(timerEl.dataset.remaining);
+                /* Timer */
+                let remaining = parseInt(timerEl.dataset.remaining || "0", 10);
 
                 function updateTimer() {
                     let h = Math.floor(remaining / 3600);
@@ -136,34 +155,86 @@
                     timerEl.textContent = `Time Left: ${h}:${m}:${s}`;
 
                     if (remaining <= 0) {
-                      timerEl.textContent = "Time Left: 0:0:0";
+                        timerEl.textContent = "Time Left: 00:00:00";
 
-                      // Run autosave one last time
-                      runAutosave().finally(() => {
-                          // Stop autosave interval
-                          if (window.autosaveInterval) {
-                              clearInterval(window.autosaveInterval);
-                          }
+                        // Run autosave one last time
+                        autosave("progress").finally(() => {
+                            // Stop autosave interval
+                            if (window.autosaveInterval) {
+                                clearInterval(window.autosaveInterval);
+                            }
 
-                          // Disable inputs
-                          document.querySelectorAll("input, button, textarea, select")
-                              .forEach(el => el.disabled = true);
+                            // Disable inputs
+                            document.querySelectorAll("input, button, textarea, select")
+                                .forEach(el => el.disabled = true);
 
-                          // Show expiration popup
-                          $("#timeUpModal").modal({
-                              backdrop: "static",
-                              keyboard: false
-                          });
-                      });
+                            // Show expiration popup
+                            $("#timeUpModal").modal({
+                                backdrop: "static",
+                                keyboard: false
+                            });
+                        });
 
-                      return;
-                  }
+                        return;
+                    }
 
-                  remaining--;
-                  setTimeout(updateTimer, 1000);
+                    remaining--;
+                    setTimeout(updateTimer, 1000);
                 }
 
                 updateTimer();
+
+                /* Tab Switch Detection */
+                if (tab_switch_detection_enabled) {
+
+                    let tabChanges = 0;
+
+                    if (!feedback) {
+                        tabChanges = 0;
+                    }
+                    else if (feedback === "Issued Warning") {
+                        tabChanges = 1;
+                    }
+                    else {
+                        let match = feedback.match(/\d+/);
+                        tabChanges = match ? parseInt(match[0], 10) : 0;
+                    }
+
+                    function fadeOutAlert(id) {
+                        const alertBox = document.getElementById(id);
+                        if (!alertBox) return;
+
+                        alertBox.style.display = "block";
+                        alertBox.style.opacity = "1";
+
+                        setTimeout(() => {
+                            alertBox.style.transition = "opacity 1s ease";
+                            alertBox.style.opacity = "0";
+                            setTimeout(() => alertBox.style.display = "none", 1000);
+                        }, 5000);
+                    }
+
+                    document.addEventListener("visibilitychange", () => {
+                        if (remaining <= 0) return;
+
+                        if (!document.hidden) {
+                            let alert;
+                            if (tabChanges === 1) alert = "auto-fade-warning";
+                            else alert = "auto-fade-report";
+
+                            fadeOutAlert(alert);
+
+                            return;
+                        }
+
+                        tabChanges++;
+
+                        if (tabChanges === 1) feedback = "Issued Warning";
+                        else feedback = "Tab Switches: " + tabChanges;
+
+                        autosave("report", feedback);
+                    });
+                }
             });
         </script>
     </div>
@@ -202,6 +273,8 @@
     </div>
   </div>
 </div>
+
+
 
 </div>
 {%endblock%}

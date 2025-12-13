@@ -37,7 +37,7 @@
                     const open = new Date(el.dataset.open);
                     const close = new Date(el.dataset.close);
 
-                    const fd = d => d.toLocaleDateString("en-GB"); // dd/mm/yyyy
+                    const fd = d => d.toLocaleDateString("en-GB");
                     const ft = d => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
                     const sameDay =
