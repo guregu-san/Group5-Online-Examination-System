@@ -4,21 +4,21 @@ PRAGMA foreign_keys = ON;
 INSERT INTO instructors
     (name, email, password_hash)
 VALUES
-    ('Teacher One', 'teacher@uni.com', 'pass'),
-    ('Dr. Alice Johnson', 'alice.johnson@univ.edu', 'hash_pw_alice'),
+    ('Teacher One', 'teacher@uni.com', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG'),
+    ('Dr. Alice Johnson', 'alice.johnson@univ.edu', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG'),
     ('joe',	'joe@example.com', '$2b$12$t5JIooA4DuwOP1oAZHLygOVmXy0dJhjRA9nC9PPA21990W/VABpxa'),
     ('Joe Doe', 'joe1@uni.com', '$2b$12$cJHNFHQMzyuPE2XksYXBE.a3lp5mKHsZ.ZZBKeIMy4mNE0SP6JIie'),
     ('alex2', 'alex2@example.com\', '$2b$12$apCWKCwGOYX2Vzqg4OENfu7o.ti2KREAG4QEy0BbR24tMLvj.hhx6'),
-    ('Prof. Bob Smith', 'bob.smith@univ.edu', 'hash_pw_bob');
+    ('Prof. Bob Smith', 'bob.smith@univ.edu', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG');
 
 -- Students
 INSERT INTO students
     (roll_number, name, email, password_hash, contact_number)
 VALUES
-    (1, 'Student One', 'student@uni.com', 'pass', '1234567890'),
-    (101, 'John Doe', 'john.doe@student.edu', 'hash_pw_john', 9876543210),
-    (102, 'Jane Miller', 'jane.miller@student.edu', 'hash_pw_jane', 9876543211),
-    (103, 'Samuel Green', 'sam.green@student.edu', 'hash_pw_sam', 9876543212),
+    (1, 'Student One', 'student@uni.com', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG', '1234567890'),
+    (101, 'John Doe', 'john.doe@student.edu', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG', 9876543210),
+    (102, 'Jane Miller', 'jane.miller@student.edu', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG', 9876543211),
+    (103, 'Samuel Green', 'sam.green@student.edu', '2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG', 9876543212),
     (104, 'Alex' ,'studentTest@uni.com', '$2b$12$cyv7vXQ1ZCIpDFZYWyNFeOjx/epMWSEOKHz/MZRSAb2jTRhws2MEG', 9876543213),
     (105, 'jakob', 'jakob@uni.com', '$2b$12$Ped50fSVQC/FQ88.doxsUO1BP1pTIQnq4iB0Af7Dt/Ag2bPcL0tRu', 9876543214);
 
