@@ -61,8 +61,9 @@ from app.exam.exam import examBp
 from .take_exam.take_exam import take_examBp
 from .view_exams import exam_viewBp
 from .exam_create import exam_createBp
-from app.manual_grading.grading_ui import gradingUiBp
-from app.manual_grading.manual_grading import manualGradingBp
+from app.app.manual_grading.grading_ui import gradingUiBp
+from app.app.manual_grading.manual_grading import manualGradingBp
+
 
 
 app.register_blueprint(authBp)
