@@ -5,8 +5,9 @@ gradingUiBp = Blueprint(
     "gradingUiBp",
     __name__,
     url_prefix="/instructor/grading",
-    template_folder="templates"   # It will look in app/templates
+    template_folder="templates"
 )
+
 
 @gradingUiBp.route("", methods=["GET"])
 def grading_dashboard():
