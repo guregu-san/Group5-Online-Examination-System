@@ -7,7 +7,8 @@ manualGradingBp = Blueprint(
     "manualGradingBp",
     __name__,
     url_prefix="/grading",
-    template_folder="../templates",
+   template_folder="templates",
+
 )
 
 
