@@ -13,10 +13,11 @@ manualGradingBp = Blueprint(
 
 # DB helpers 
 def get_db():
-    conn = sqlite3.connect("oesDB.db")
+    conn = sqlite3.connect("../oesDB.db")
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
+
 
 
 def row_to_dict(row):
