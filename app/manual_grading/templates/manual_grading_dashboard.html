@@ -87,14 +87,7 @@
       examsList.innerHTML =
         '<li class="list-group-item text-center">Loading...</li>';
 
-<<<<<<< Updated upstream
-      const url =
-        "http://127.0.0.1:5000/grading/dashboard/" +
-        encodeURIComponent(email);
-=======
-      // Use relative path so it works on the same host/port
       const url = `/grading/dashboard/${encodeURIComponent(email)}`;
->>>>>>> Stashed changes
 
       try {
         const res = await fetch(url);
@@ -147,11 +140,7 @@
 
     loadBtn.addEventListener("click", loadDashboard);
 
-<<<<<<< Updated upstream
- 
-=======
-    // Initial load (similar to useEffect([]))
->>>>>>> Stashed changes
+
     loadDashboard();
   });
 </script>
