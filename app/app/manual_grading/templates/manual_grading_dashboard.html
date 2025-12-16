@@ -1,31 +1,62 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container mt-4">
-  <h3>Manual Grading Dashboard</h3>
+{% block title %}Manual Grading Dashboard{% endblock %}
 
-  <!-- Instructor email input -->
-  <label class="form-label mt-2" for="instructorEmail">Instructor Email</label>
-  <input
-    id="instructorEmail"
-    class="form-control"
-    type="email"
-    value="teacher@uni.com"
-  />
+{% block main_content %}
+<div class="card-container">
+  <div class="card wide">
+    <h1>Manual Grading Dashboard</h1>
+    <p style="color:#6b7280; margin-bottom:20px;">
+      Search for your exams and open their submissions for manual grading.
+    </p>
 
-  <button id="loadDashboardBtn" class="btn btn-primary mt-3">
-    Load Manual Grading
-  </button>
+    <!-- Instructor email input -->
+    <div class="filter-box" style="background:#f9fafb; padding:16px; border-radius:8px; border:1px solid #e5e7eb;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="flex:1; min-width:240px;">
+          <label for="instructorEmail"
+                 style="display:block; font-weight:600; margin-bottom:6px; color:#374151;">
+            Instructor Email
+          </label>
+          <input
+            id="instructorEmail"
+            type="email"
+            class="form-control"
+            placeholder="instructor@uni.com"
+            value="teacher@uni.com"
+            style="padding:10px; border-radius:6px; border:1px solid #d1d5db;"
+          />
+        </div>
 
-  <!-- Error box -->
-  <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+        <button id="loadDashboardBtn"
+                class="btn btn-primary"
+                style="padding:10px 24px; font-weight:600;">
+          Load Manual Grading
+        </button>
+      </div>
+    </div>
 
-  <!-- Exams list -->
-  <ul id="examsList" class="list-group mt-4">
-    <li class="list-group-item text-center text-muted">
-      No exams loaded yet.
-    </li>
-  </ul>
+    <!-- Error box -->
+    <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+
+    <!-- Exams list -->
+    <div id="examsWrapper" style="margin-top:20px;">
+      <ul id="examsList" class="list-group">
+        <li class="list-group-item text-center text-muted">
+          No exams loaded yet.
+        </li>
+      </ul>
+    </div>
+
+    <div style="margin-top:24px;">
+      <a href="/dashboard"
+         style="display:inline-block; padding:8px 18px; background-color:#6b7280; color:white; border-radius:6px; text-decoration:none; font-weight:600; transition:all .3s ease;"
+         onmouseover="this.style.backgroundColor='#4b5563'"
+         onmouseout="this.style.backgroundColor='#6b7280'">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -35,24 +66,35 @@
     const errorBox = document.getElementById("errorBox");
     const examsList = document.getElementById("examsList");
 
+    function showError(message) {
+      if (!message) {
+        errorBox.classList.add("d-none");
+        errorBox.textContent = "";
+        return;
+      }
+      errorBox.textContent = message;
+      errorBox.classList.remove("d-none");
+    }
+
     async function loadDashboard() {
       const email = emailInput.value.trim();
       if (!email) {
-        errorBox.textContent = "Please enter an instructor email.";
-        errorBox.classList.remove("d-none");
+        showError("Please enter an instructor email.");
         return;
       }
 
-      errorBox.classList.add("d-none");
-      errorBox.textContent = "";
-
-      // Show temporary loading item
+      showError("");
       examsList.innerHTML =
         '<li class="list-group-item text-center">Loading...</li>';
 
+<<<<<<< Updated upstream
       const url =
         "http://127.0.0.1:5000/grading/dashboard/" +
         encodeURIComponent(email);
+=======
+      // Use relative path so it works on the same host/port
+      const url = `/grading/dashboard/${encodeURIComponent(email)}`;
+>>>>>>> Stashed changes
 
       try {
         const res = await fetch(url);
@@ -61,7 +103,6 @@
         }
 
         const exams = await res.json();
-
         examsList.innerHTML = "";
 
         if (!Array.isArray(exams) || exams.length === 0) {
@@ -70,10 +111,14 @@
           return;
         }
 
-        exams.forEach((exam) => {
+        exams.forEach(function (exam) {
           const li = document.createElement("li");
           li.className =
             "list-group-item d-flex justify-content-between align-items-center";
+          li.style.display = "flex";
+          li.style.justifyContent = "space-between";
+          li.style.alignItems = "center";
+
           li.innerHTML = `
             <div>
               <strong>${exam.title}</strong> — ${exam.course_code}
@@ -83,8 +128,10 @@
                 Graded: ${exam.graded}
               </div>
             </div>
-            <a class="btn btn-sm btn-outline-primary"
-               href="/instructor/grading/exams/${exam.exam_id}/submissions">
+            <a href="/instructor/grading/exams/${exam.exam_id}/submissions"
+               style="display:inline-block; background-color:#2563eb; color:white; padding:6px 14px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:600; transition:all .3s ease;"
+               onmouseover="this.style.backgroundColor='#1d4ed8'; this.style.boxShadow='0 4px 6px rgba(37,99,235,0.3)'"
+               onmouseout="this.style.backgroundColor='#2563eb'; this.style.boxShadow='none'">
               View Submissions
             </a>
           `;
@@ -92,17 +139,19 @@
         });
       } catch (err) {
         console.error(err);
-        errorBox.textContent = "Failed to load manual grading dashboard";
-        errorBox.classList.remove("d-none");
+        showError("Failed to load manual grading dashboard.");
         examsList.innerHTML =
           '<li class="list-group-item text-center text-muted">Error loading exams.</li>';
       }
     }
 
-    // Button click
     loadBtn.addEventListener("click", loadDashboard);
 
+<<<<<<< Updated upstream
  
+=======
+    // Initial load (similar to useEffect([]))
+>>>>>>> Stashed changes
     loadDashboard();
   });
 </script>
