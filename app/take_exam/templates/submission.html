@@ -138,7 +138,7 @@
                 /* Periodic Autosave */
                 window.autosaveInterval = setInterval(() => {
                     autosave("progress").then(() => console.log("Autosaved"));
-                }, 10000);
+                }, 5000);
 
                 /* Timer */
                 let remaining = parseInt(timerEl.dataset.remaining || "0", 10);
@@ -218,10 +218,7 @@
                         if (remaining <= 0) return;
 
                         if (!document.hidden) {
-                            let alert;
-                            if (tabChanges === 1) alert = "auto-fade-warning";
-                            else alert = "auto-fade-report";
-
+                            let alert = tabChanges === 1 ? "auto-fade-warning" : "auto-fade-report";
                             fadeOutAlert(alert);
 
                             return;

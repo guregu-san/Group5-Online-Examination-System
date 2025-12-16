@@ -11,7 +11,7 @@ from app.scheduler import set_exam_timers
 print(app.url_map)
 
 if __name__ == "__main__":
-    # Necessary guard to avoid duplicate schedulers when running in debug mode
+    # Necessary guard to prevent duplicate schedulers when running in debug mode
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         scheduler.add_job(
             id="schedule_timers",
@@ -24,4 +24,5 @@ if __name__ == "__main__":
         scheduler.start()
         print("[Scheduler] Started")
 
-    app.run(debug=True, port=5001)
+    # Made the website accessible to all devices on LAN for testing
+    app.run(debug=True, port=5001, host="0.0.0.0")

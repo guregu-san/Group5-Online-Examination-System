@@ -28,7 +28,6 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from flask_login import current_user, login_required
 
 # Built-in Python imports
-import platform
 import random
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -84,10 +83,8 @@ def exam_search():
         flash('Instructors cannot access the requested page', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Check for unfinished submission using the DB, and update cookies if there's one
+    # If the student has an unfinished submission don't let them search for an exam
     if submission:
-        session['current_exam_id'] = submission.exam_id
-        session['current_submission_id'] = submission.submission_id
         print("[U5] Student has unfinished submission") # Debugging
         return redirect(url_for('take_examBp.initialization'))
 
@@ -105,125 +102,137 @@ def exam_search():
 @take_examBp.route('/initialization', methods=['GET', 'POST'])
 @login_required
 def initialization():
-    # Validate exam cookie
-    current_exam_id = session.get('current_exam_id')
-    if not current_exam_id:
-        return redirect(url_for('take_examBp.exam_search'))
+    submission = Submissions.query.filter_by(roll_number=current_user.roll_number, status="IN_PROGRESS").first()
+    current_datetime = datetime.utcnow()
+    started_exam = False
+    taking_exam_now = False
 
+    # Check if there's an unfinished submission
+    if submission:
+        started_exam = True
+        current_exam_id = submission.exam_id
+        session['current_exam_id'] = submission.exam_id
+
+        # If the latest update was within the autosave window, it means the student
+        # is currently taking the exam on another browser tab (already has a session)
+        # TODO: Replace magic number(autosave interval + small grace period to account for autosave delays)
+        #       with proper const variables that are set in .conf
+        taking_exam_now = (int((current_datetime - submission.updated_at).total_seconds()) <= 7)
+    else:
+        # Validate the cookie that was set in exam search
+        current_exam_id = session.get('current_exam_id')
+        if not current_exam_id:
+            return redirect(url_for('take_examBp.exam_search'))
+
+    # Check if exam actually exists
     exam = Exams.query.get(current_exam_id)
     if not exam:
         session.pop('current_exam_id', None)
+        session.pop('current_submission_id', None) #PROBABLY NOT NEEDED
         return redirect(url_for('take_examBp.exam_search'))
 
-    # Check if student has an unfinished submission
-    taking_exam = False
-    current_submission_id = session.get('current_submission_id')
-    if current_submission_id:
-        submission = Submissions.query.get(current_submission_id)
-        if (not submission) or (submission and submission.status != "IN_PROGRESS"):
-            session.pop('current_submission_id', None)
-        else:
-            # If there's an active submission but the exam and
-            # submission cookies don't match, the exam cookie must be updated
-            if submission.exam_id != current_exam_id:
-                current_exam_id = submission.exam_id
-                session['current_exam_id'] = submission.exam_id
-
-            taking_exam = True
-
-    # Check exam availability
-    exam_open = True
-    current_datetime = datetime.utcnow()
-    if current_datetime < exam.opens_at or current_datetime > exam.closes_at:
-        exam_open = False
+    # If the exam allows only single sessions and they're already taking it, they can't open it in another window
+    single_session = exam.security_settings['single_session']
+    if single_session and taking_exam_now:
+        flash('Only a single session per student is allowed for the active exam, and it is already open in another browser tab.', 'warning')
+        return redirect(url_for('dashboard'))
 
     exam_instructor = Instructors.query.filter_by(email=exam.instructor_email).first()
+    exam_open = (exam.opens_at < current_datetime and current_datetime < exam.closes_at)
 
-    '''
-    if platform.system() == 'Darwin':
-        local_tz = None
-    else:
-        try:
-            local_tz = ZoneInfo("localtime")
-        except Exception:
-            local_tz = None
-
-    local_tz_availability = [exam.opens_at.astimezone(local_tz), exam.closes_at.astimezone(local_tz)]
-    '''
-
+    # Make open and close datetimes timezone aware to display them properly in the student's timezone
     tz_aware_dates = [exam.opens_at.replace(tzinfo=ZoneInfo("UTC")), exam.closes_at.replace(tzinfo=ZoneInfo("UTC"))]
     print(f"[U5] Exam window: {tz_aware_dates[0]} until {tz_aware_dates[1]}")
 
     form = ExamInitializationForm()
     form.exam_id.data = current_exam_id
     if form.validate_on_submit():
-        if form.continue_submission.data:
-            return redirect(url_for('take_examBp.start'))
-
         if form.cancel.data:
             # Remove the exam cookie if user declines to start exam
             session.pop('current_exam_id', None)
             return redirect(url_for('take_examBp.exam_search'))
 
-        # Initialize submission and store it in the database + as a cookie
-        submission = Submissions(
-            exam_id = exam.exam_id,
-            roll_number = current_user.roll_number,
-            started_at = current_datetime,
-            status = "IN_PROGRESS"
-        )
-        db.session.add(submission)
-        db.session.commit()
-        session['current_submission_id'] = submission.submission_id
+        if form.accept.data:
+            # Initialize submission and store it in the database + as a cookie
+            current_datetime = datetime.utcnow()
+            submission = Submissions(
+                exam_id = exam.exam_id,
+                roll_number = current_user.roll_number,
+                started_at = current_datetime,
+                updated_at = current_datetime,
+                status = "IN_PROGRESS"
+            )
+            db.session.add(submission)
+            db.session.commit()
 
+        # Cookies that act as one-time tokens are required to start/continue single-session exams
+        if single_session:
+            session['can_start'] = True
+
+        session['current_submission_id'] = submission.submission_id
         return redirect(url_for('take_examBp.start'))
 
     return render_template('exam_initialization.html', form=form, exam=exam, instructor=exam_instructor,
-        taking_exam=taking_exam, exam_open=exam_open, availability=tz_aware_dates)
+        started_exam=started_exam, exam_open=exam_open, availability=tz_aware_dates)
 
 
 @take_examBp.route('/start', methods=['GET', 'POST'])
 @login_required
 def start():
-    # Validate exam cookie
-    current_exam_id = session.get('current_exam_id')
-    if not current_exam_id:
-        return redirect(url_for('take_examBp.exam_search'))
-
-    exam = Exams.query.get(current_exam_id)
-    if not exam:
-        session.pop('current_exam_id', None)
-        return redirect(url_for('take_examBp.exam_search'))
-
     # Validate submission cookie
     current_submission_id = session.get('current_submission_id')
     if not current_submission_id:
         return redirect(url_for('take_examBp.initialization'))
 
     submission = Submissions.query.get(current_submission_id)
-    if (not submission):
+    if not submission or submission.status != "IN_PROGRESS":
         session.pop('current_submission_id', None)
         return redirect(url_for('take_examBp.initialization'))
 
+    # Validate exam cookie
+    current_exam_id = session.get('current_exam_id')
+    if current_exam_id != submission.exam_id:
+        current_exam_id = submission.exam_id
+        session['current_exam_id'] = submission.exam_id
+
+    exam = Exams.query.get(current_exam_id)
+    if not exam:
+        session.pop('current_exam_id', None)
+        session.pop('current_submission_id', None)
+        return redirect(url_for('take_examBp.exam_search'))
+
     is_post = request.method == 'POST'
     if not is_post:
+        # If the exam is single-session and the user doesn't have the required token, kick them out
+        if exam.security_settings['single_session']:
+            if not session.get('can_start'):
+                return redirect(url_for('take_examBp.initialization'))
+
+            # Consume the start token and give them another token that allows saving or submitting
+            session.pop('can_start', None)
+            session['can_save_or_sub'] = True
+
+        # Retrive the exams questions in order
         questions = Questions.query.filter_by(exam_id=exam.exam_id).order_by(Questions.order_index.asc()).all()
 
-        # Shuffle on GET
+        # Shuffle order if the setting is enabled
         if exam.security_settings["shuffle"]:
             random.shuffle(questions)
 
-        # Save shuffle order
+        # Save order to use when saving or submitting
         session["shuffled_order"] = [q.question_id for q in questions]
     else:
-        # DO NOT reshuffle order on POST
+        # Retreive question order used on page load
         ordered_ids = session.get('shuffled_order')
-        questions = Questions.query.filter(Questions.question_id.in_(ordered_ids)).all()
+        if not ordered_ids:
+            flash('Correct question order unknown. Saving/Submitting failed.', 'danger')
+            return redirect(url_for('initialization'))
 
+        questions = Questions.query.filter(Questions.question_id.in_(ordered_ids)).all()
         questions.sort(key=lambda q: ordered_ids.index(q.question_id))
 
-    # Retrieve saved answers, if any, in the correct dict format
-    # Eg. {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]}
+    # Retrieve saved answers, if any, and convert them to the correct dict format
+    # (keys must be ints, e.g., {'5': 14, '6': [16, 17, 18]} --> {5: 14, 6: [16, 17, 18]})
     saved_answers = submission.answers or {}
     saved_answers = {int(k): v for k, v in saved_answers.items()}
 
@@ -262,9 +271,13 @@ def start():
     if form.validate_on_submit():
         print("[U5] Submission form validated") # Debugging
 
-        # Once a student submits they can't change their submission, only start a new one
+        # PROBABLY NOT NEEDED
         if submission.status != "IN_PROGRESS":
             return redirect(url_for('dashboard'))
+
+        # Student's need a token to save or submit in single-session mode
+        if exam.security_settings['single_session'] and not session.get('can_save_or_sub'):
+            return redirect(url_for('take_examBp.initialization'))
 
         # Collect answers
         answers = {}
@@ -276,7 +289,7 @@ def start():
             else:
                 answers[qid] = subform.answer_single.data
 
-        print(f"[U5] Collected answers: {answers}") # Debugging
+        print(f"[U5] Collected answers {answers} for submission {current_submission_id}") # Debugging
 
         submission.answers = answers
         submission.updated_at = datetime.utcnow()
@@ -287,6 +300,7 @@ def start():
         session.pop('current_submission_id', None)
         session.pop('current_exam_id', None)
         session.pop('shuffled_order', None)
+        session.pop('can_save_or_sub', None)
         db.session.commit()
 
         return redirect(url_for('dashboard'))
@@ -329,7 +343,7 @@ def autosave():
         if feedback:
             submission.feedback = feedback
         else:
-            return ("missing feedback", 400)
+            return ("missing report feedback", 400)
     else:
         return ("unknown autosave type", 400)
 

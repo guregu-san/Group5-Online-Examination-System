@@ -28,7 +28,7 @@
             </span>
             </p><br>
 
-            <!-- Date Formatter-->
+            <!--Date Formatter-->
             <script>
                 document.addEventListener("DOMContentLoaded", () => {
                     const el = document.getElementById("availability-display");
@@ -95,7 +95,7 @@
                         }, 2500);
                     </script>
                 {% endif %}
-                {% if taking_exam %}
+                {% if started_exam %}
                     {{ form.continue_submission(class="btn btn-primary") }}
                 {% else %}
                     {{ form.accept(class="btn btn-primary") }}
