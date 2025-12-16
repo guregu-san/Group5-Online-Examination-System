@@ -1,56 +1,76 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container mt-4">
-  <h3>Submissions for Exam #{{ exam_id }}</h3>
+{% block title %}Submissions{% endblock %}
 
-  <!-- Filter & Refresh -->
-  <div class="d-flex align-items-center mt-3">
-    <label class="me-2 mb-0">Filter by status:</label>
-    <select id="statusFilter" class="form-select w-auto">
-      <option value="">All</option>
-      <option value="SUBMITTED">SUBMITTED</option>
-      <option value="IN_REVIEW">IN_REVIEW</option>
-      <option value="GRADED">GRADED</option>
-    </select>
+{% block main_content %}
+<div class="card-container">
+  <div class="card wide">
+    <h1>Submissions for Exam #{{ exam_id }}</h1>
 
-    <button id="refreshBtn" class="btn btn-secondary btn-sm ms-2">
-      Refresh
-    </button>
+    <!-- Filter & Refresh -->
+    <div class="filter-box" style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 16px;">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <div style="min-width: 200px;">
+          <label style="display:block; font-weight:600; margin-bottom:6px; color:#374151;">
+            Filter by status:
+          </label>
+          <select id="statusFilter"
+                  class="form-control"
+                  style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db;">
+            <option value="">All</option>
+            <option value="SUBMITTED">SUBMITTED</option>
+            <option value="IN_REVIEW">IN_REVIEW</option>
+            <option value="REVIEWED">REVIEWED</option>
+          </select>
+        </div>
+
+        <button id="refreshBtn"
+                class="btn btn-secondary"
+                style="padding:8px 18px; font-weight:600;">
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Error box -->
+    <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto; margin-top: 20px;">
+      <table>
+        <thead>
+          <tr style="background-color:#f3f4f6;">
+            <th>Submission ID</th>
+            <th>Student ID</th>
+            <th>Student Name</th>
+            <th>Started At</th>
+            <th>Submitted At</th>
+            <th>Status</th>
+            <th>Total Score</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="submissionsBody">
+          <tr>
+            <td colspan="8" style="text-align:center; padding:14px;">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <a href="/instructor/grading"
+         style="display:inline-block; padding: 8px 18px; background-color:#6b7280; color:white; border-radius:6px; text-decoration:none; font-weight:600; transition:all .3s ease;"
+         onmouseover="this.style.backgroundColor='#4b5563'"
+         onmouseout="this.style.backgroundColor='#6b7280'">
+        ← Back to Manual Grading Dashboard
+      </a>
+    </div>
   </div>
-
-  <!-- Error box -->
-  <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
-
-  <!-- Table -->
-  <table class="table table-striped mt-3">
-    <thead>
-      <tr>
-        <th>Submission ID</th>
-        <th>Roll Number</th>
-        <th>Student Name</th>
-        <th>Submitted At</th>
-        <th>Status</th>
-        <th>Total Score</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="submissionsBody">
-      <tr>
-        <td colspan="7" class="text-center">Loading...</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <a class="btn btn-link mt-3" href="/instructor/grading">
-    ← Back to Manual Grading Dashboard
-  </a>
 </div>
 
-<!-- Page script: behaves like the React ExamSubmissionsList component -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // exam_id comes from Flask when rendering the template
     const examId = "{{ exam_id }}";
 
     const statusFilter = document.getElementById("statusFilter");
@@ -58,9 +78,23 @@
     const tbody = document.getElementById("submissionsBody");
     const errorBox = document.getElementById("errorBox");
 
+    function showError(message) {
+      if (!message) {
+        errorBox.classList.add("d-none");
+        errorBox.textContent = "";
+        return;
+      }
+      errorBox.textContent = message;
+      errorBox.classList.remove("d-none");
+    }
+
     async function loadSubmissions() {
-      errorBox.classList.add("d-none");
-      errorBox.textContent = "";
+      showError("");
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding:14px;">Loading...</td>
+        </tr>
+      `;
 
       let url = `/grading/exams/${examId}/submissions`;
       const status = statusFilter.value;
@@ -78,23 +112,38 @@
         tbody.innerHTML = "";
 
         if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="7" class="text-center">No submissions found.</td></tr>';
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align:center; padding:14px; color:#6b7280;">
+                No submissions found.
+              </td>
+            </tr>
+          `;
           return;
         }
 
-        data.forEach((s) => {
+        data.forEach(function (s) {
           const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid #e5e7eb";
+
+          const statusBadge =
+            `<span style="display:inline-block; background-color:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:4px; font-size:12px; font-weight:600;">
+               ${s.status}
+             </span>`;
+
           tr.innerHTML = `
-            <td>${s.submission_id}</td>
-            <td>${s.roll_number || ""}</td>
-            <td>${s.student_name || ""}</td>
-            <td>${s.submitted_at || ""}</td>
-            <td>${s.status}</td>
-            <td>${s.total_score ?? ""}</td>
-            <td>
-              <a class="btn btn-sm btn-outline-primary"
-                 href="/instructor/grading/submissions/${s.submission_id}">
+            <td style="padding:10px;">${s.submission_id}</td>
+            <td style="padding:10px;">${s.roll_number || ""}</td>
+            <td style="padding:10px;">${s.student_name || ""}</td>
+            <td style="padding:10px;">${s.started_at || ""}</td>
+            <td style="padding:10px;">${s.submitted_at || ""}</td>
+            <td style="padding:10px;">${statusBadge}</td>
+            <td style="padding:10px;">${s.total_score ?? "-"}</td>
+            <td style="padding:10px;">
+              <a href="/instructor/grading/submissions/${s.submission_id}"
+                 style="display:inline-block; background-color:#2563eb; color:white; padding:6px 14px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:600; transition:all .3s ease;"
+                 onmouseover="this.style.backgroundColor='#1d4ed8'; this.style.boxShadow='0 4px 6px rgba(37,99,235,0.3)'"
+                 onmouseout="this.style.backgroundColor='#2563eb'; this.style.boxShadow='none'">
                 Review
               </a>
             </td>
@@ -103,17 +152,21 @@
         });
       } catch (err) {
         console.error(err);
-        errorBox.textContent = "Failed to load submissions";
-        errorBox.classList.remove("d-none");
-        tbody.innerHTML =
-          '<tr><td colspan="7" class="text-center">Error loading submissions.</td></tr>';
+        showError("Failed to load submissions.");
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align:center; padding:14px; color:#b91c1c;">
+              Error loading submissions.
+            </td>
+          </tr>
+        `;
       }
     }
 
     refreshBtn.addEventListener("click", loadSubmissions);
     statusFilter.addEventListener("change", loadSubmissions);
 
-    // initial load
+    // Initial load
     loadSubmissions();
   });
 </script>
