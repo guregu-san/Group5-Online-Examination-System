@@ -186,6 +186,10 @@
 
                 /* Tab Switch Detection */
                 if (tab_switch_detection_enabled) {
+                    skipInstance = false;
+                    window.onbeforeunload = function() {
+                        skipInstance = true;
+                    };
 
                     let tabChanges = 0;
 
@@ -215,7 +219,7 @@
                     }
 
                     document.addEventListener("visibilitychange", () => {
-                        if (remaining <= 0) return;
+                        if (remaining <= 0 || skipInstance) return;
 
                         if (!document.hidden) {
                             let alert = tabChanges === 1 ? "auto-fade-warning" : "auto-fade-report";
