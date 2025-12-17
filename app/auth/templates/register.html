@@ -1,147 +1,119 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
+{% block title %}Register{% endblock %}
 
-{%block title%}Register!{%endblock%}
+{% block main_content %}
 
-{%block main_content%}
-<div class="container">
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            <div class="panel panel-default" style="margin-top: 50px; margin-bottom: 50px;">
-                <div class="panel-body">
-                    <h1 class="text-center">Register Page</h1>
-                    <form method="POST" action="">
-                        {{ form.hidden_tag() }}
+<div class="card-container">
+  <div class="card">
 
-                        <div class="form-group">
-                            {{ form.role.label }}
-                            <div class="btn-group btn-group-justified" data-toggle="buttons">
-                                {%- for subfield in form.role -%}
-                                <div class="btn-group">
-                                    <label class="btn btn-default btn-sm {% if subfield.data == form.role.data %}active{% endif %}">
-                                        {{ subfield }} {{ subfield.label.text }}
-                                    </label>
-                                </div>
-                                {%- endfor -%}
-                            </div>
-                            {% if form.role.errors %}
-                            <div class="text-danger">
-                                {% for error in form.role.errors %}
-                                    <small>{{ error }}</small><br>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
+    <h1>Create Account</h1>
+    <p>Join the Online Examination System</p>
 
-                    <div class="form-group">
-                        {{ form.email.label }}
-                        {{ form.email(class="form-control") }}
-                        {% if form.email.errors %}
-                            <div class="text-danger">
-                                {% for error in form.email.errors %}
-                                    <small>{{ error }}</small><br>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
+    <form method="POST" action="">
+      {{ form.hidden_tag() }}
 
-                    <div class="form-group">
-                        {{ form.password.label }}
-                        {{ form.password(class="form-control") }}
-                        {% if form.password.errors %}
-                            <div class="text-danger">
-                                {% for error in form.password.errors %}
-                                    <small>{{ error }}</small><br>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.name.label }}
-                        {{ form.name(class="form-control") }}
-                        {% if form.name.errors %}
-                            <div class="text-danger">
-                                {% for error in form.name.errors %}
-                                    <small>{{ error }}</small><br>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div id="student-fields">
-                        <div class="form-group">
-                            {{ form.roll_number.label }}
-                            {{ form.roll_number(class="form-control") }}
-                            {% if form.roll_number.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.roll_number.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.contact_number.label }}
-                            {{ form.contact_number(class="form-control") }}
-                            {% if form.contact_number.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.contact_number.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ form.submit(class="btn btn-primary btn-block") }}
-                    </div>
-                </form>
-                <div class="text-center">
-                    <a href="{{url_for('authBp.login')}}">Already have an account? Log In</a><br>
-                </div>
-            </div>
+      <!-- Role -->
+      <div class="form-group">
+        {{ form.role.label }}
+        <div class="radio-inline">
+          {% for subfield in form.role %}
+            <label class="radio-item">
+              {{ subfield }} {{ subfield.label.text }}
+            </label>
+          {% endfor %}
         </div>
-    </div>
+        {% if form.role.errors %}
+          <div class="text-danger">
+            {% for error in form.role.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        {{ form.email.label }}
+        {{ form.email(class="form-control", placeholder="Email address") }}
+        {% if form.email.errors %}
+          <div class="text-danger">
+            {% for error in form.email.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        {{ form.password.label }}
+        {{ form.password(class="form-control", placeholder="Password") }}
+        {% if form.password.errors %}
+          <div class="text-danger">
+            {% for error in form.password.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Name -->
+      <div class="form-group">
+        {{ form.name.label }}
+        {{ form.name(class="form-control", placeholder="Full name") }}
+        {% if form.name.errors %}
+          <div class="text-danger">
+            {% for error in form.name.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Student-only -->
+      <div id="student-fields">
+        <div class="form-group">
+          {{ form.roll_number.label }}
+          {{ form.roll_number(class="form-control", placeholder="Student ID") }}
         </div>
-    </div>
+
+        <div class="form-group">
+          {{ form.contact_number.label }}
+          {{ form.contact_number(class="form-control", placeholder="Contact number") }}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        Register
+      </button>
+    </form>
+
+    <p style="margin-top:20px;">
+      Already have an account?
+      <a href="{{ url_for('authBp.login') }}">Login</a>
+    </p>
+
+  </div>
 </div>
 
-
 <script>
-    // show/hide student-only fields based on selected role
-    function updateStudentFields() {
-        const studentFields = document.getElementById('student-fields');
-        const roleInputs = document.getElementsByName('role');
-        let role = 'Student';
-        for (const r of roleInputs) {
-            if (r.checked) { role = r.value; break; }
-        }
-        if (role === 'Student') {
-            studentFields.style.display = 'block';
-        } else {
-            studentFields.style.display = 'none';
-        }
-    }
+function updateStudentFields() {
+  const studentFields = document.getElementById('student-fields');
+  const roles = document.getElementsByName('role');
+  let selected = 'Student';
+  for (const r of roles) {
+    if (r.checked) selected = r.value;
+  }
+  studentFields.style.display = selected === 'Student' ? 'block' : 'none';
+}
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const roleInputs = document.getElementsByName('role');
-        for (const r of roleInputs) {
-            r.addEventListener('change', updateStudentFields);
-        }
-        
-        // Add click listeners to labels for better responsiveness with Bootstrap buttons
-        const labels = document.querySelectorAll('.btn-group-justified label.btn');
-        for (const label of labels) {
-            label.addEventListener('click', function() {
-                // Delay slightly to allow the input state to update
-                setTimeout(updateStudentFields, 50);
-            });
-        }
-
-        updateStudentFields();
-    });
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="role"]').forEach(r =>
+    r.addEventListener('change', updateStudentFields)
+  );
+  updateStudentFields();
+});
 </script>
-{%endblock%}
+
+{% endblock %}

@@ -1,54 +1,53 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
+{% block title %}Login{% endblock %}
 
-{%block title%}Login!{%endblock%}
+{% block main_content %}
 
-{%block main_content%}
+<div class="card-container">
+  <div class="card">
 
-<div class="container" style="min-height: 80vh; display: flex; align-items: center;">
-    <div class="row" style="width: 100%;">
-        <div class="col-md-6 col-md-offset-3">
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <h1 class="text-center">Login Page</h1>
-                    <form method="POST" action="">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="form-group">
-                            {{ form.email.label }}
-                            {{ form.email(class="form-control") }}
-                            {% if form.email.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.email.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+    <h1>Welcome Back</h1>
+    <p>Please sign in to your account</p>
 
-                        <div class="form-group">
-                            {{ form.password.label }}
-                            {{ form.password(class="form-control") }}
-                            {% if form.password.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.password.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+    <form method="POST" action="">
+      {{ form.hidden_tag() }}
 
-                        <div class="form-group">
-                            {{ form.submit(class="btn btn-primary btn-block") }}
-                        </div>
-                    </form>
-                    <div class="text-center">
-                        <a href="{{url_for('authBp.register')}}">Don't have an account? Sign up</a><br>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+      <div class="form-group">
+        {{ form.email.label }}
+        {{ form.email(class="form-control", placeholder="Email address") }}
+        {% if form.email.errors %}
+          <div class="text-danger">
+            {% for error in form.email.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        {{ form.password.label }}
+        {{ form.password(class="form-control", placeholder="Password") }}
+        {% if form.password.errors %}
+          <div class="text-danger">
+            {% for error in form.password.errors %}
+              <small>{{ error }}</small><br>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        Login
+      </button>
+    </form>
+
+    <p style="margin-top:20px;">
+      Don’t have an account?
+      <a href="{{ url_for('authBp.register') }}">Create one</a>
+    </p>
+
+  </div>
 </div>
-{%endblock%}
+
+{% endblock %}
