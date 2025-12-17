@@ -1,7 +1,7 @@
 from app import app
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, RadioField
-from wtforms.validators import InputRequired, Length, ValidationError, Optional, Email
+from wtforms.validators import InputRequired, Length, ValidationError, Optional, Email, Regexp
 #from app.auth.models import Students, Instructors
 from app.models import Students, Instructors
 from flask_bcrypt import Bcrypt
@@ -28,21 +28,31 @@ class LoginForm(FlaskForm):
 
 
 class RegisterForm(FlaskForm):
-    email = StringField(render_kw={"placeholder": "email"}, filters=[lambda x: x.strip() if x else None])
+    email = StringField(
+        render_kw={"placeholder": "email"},
+        filters=[lambda x: x.strip() if x else None],
+        validators=[
+            InputRequired(),
+            Length(min=4, max=50),
+            Regexp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', message="Invalid email address.")
+        ]
+    )
     password = PasswordField(render_kw={"placeholder": "Password"})
     role = RadioField('Role', choices=[('Student', 'Student'), ('Instructor', 'Instructor')], default='Student')
     roll_number = StringField(render_kw={"placeholder": "Roll Number"}, filters=[lambda x: x.strip() if x else None])
     name = StringField(render_kw={"placeholder": "Name"}, filters=[lambda x: x.strip() if x else None])
-    contact_number = StringField(render_kw={"placeholder": "Contact Number"}, filters=[lambda x: x.strip() if x else None])
+    contact_number = StringField(
+        render_kw={"placeholder": "Contact Number"},
+        filters=[lambda x: x.strip() if x else None],
+        validators=[
+            InputRequired(),
+            Regexp(r'^\d{10,15}$', message="Contact number must be 10 to 15 digits.")
+        ]
+    )
     
     submit = SubmitField('Register')
 
     def validate_email(self, email):
-        if not email.data:
-            raise ValidationError("Email is required.")
-        if len(email.data) < 4 or len(email.data) > 50:
-            raise ValidationError("Email must be between 4 and 50 characters.")
-
         email_data = email.data.lower()
         role = self.role.data or 'Student'
         if role == 'Student':
@@ -51,13 +61,13 @@ class RegisterForm(FlaskForm):
             existing_user_email = Instructors.query.filter_by(email=email_data).first()
         
         if existing_user_email:
-            raise ValidationError("That email address is already in use. Please choose a different one.")
+            raise ValidationError("Email already exists.")
 
     def validate_password(self, password):
         if not password.data:
             raise ValidationError("Password is required.")
-        if len(password.data) < 6 or len(password.data) > 50:
-            raise ValidationError("Password must be between 8 and 50 characters.")
+        if len(password.data) < 6 or len(password.data) > 20:
+            raise ValidationError("Password must be between 6 and 20 characters.")
 
     def validate_roll_number(self, roll_number):
         if self.role.data == 'Student':
@@ -70,17 +80,13 @@ class RegisterForm(FlaskForm):
     def validate_name(self, name):
         if not name.data:
             raise ValidationError("Name is required.")
-        if len(name.data) < 2 or len(name.data) > 50:
-            raise ValidationError("Name must be between 2 and 50 characters.")
+        if len(name.data) < 2 or len(name.data) > 20:
+            raise ValidationError("Name must be between 2 and 20 characters.")
 
     def validate_contact_number(self, contact_number):
-        if not contact_number.data and self.role.data == 'Student':
-            raise ValidationError("Contact Number is required for Students.")
         if self.role.data == 'Student':
             if not contact_number.data:
                 raise ValidationError("Contact Number is required for Students.")
-            if len(contact_number.data) < 10 or len(contact_number.data) > 15:
-                raise ValidationError("Contact Number must be between 10 and 15 characters.")
             
             existing_student_contact = Students.query.filter_by(contact_number=contact_number.data).first()
             if existing_student_contact:
@@ -88,3 +94,5 @@ class RegisterForm(FlaskForm):
         else:
             if contact_number.data and (len(contact_number.data) < 10 or len(contact_number.data) > 15):
                 raise ValidationError("Contact Number must be between 10 and 15 characters.")
+            
+            
