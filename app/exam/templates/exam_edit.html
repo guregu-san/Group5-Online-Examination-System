@@ -1,82 +1,98 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Exam{% endblock %}
 
 {% block main_content %}
 <div class="card-container">
-  <div class="card">
+  <div class="card-custom">
 
-    <h1 class="text-center">{{ exam['title'] }}</h1>
+    <h2 class="text-center">{{ exam['title'] }}</h2>
 
-    <div class="d-flex justify-content-center my-3">
-      
-      <!-- Opens/Closes At -->
+    <div class="d-flex justify-content-center mt-3 mb-4">
+      <div class="mx-3"><strong>Opens:</strong> {{ exam['opens_at'] }}</div>
+      <div class="mx-3"><strong>Closes:</strong> {{ exam['closes_at'] }}</div>
       <div class="mx-3 text-center">
-        <strong>Opens At:</strong><br>
-        {{ exam['opens_at'] if exam['opens_at'] else "Not set" }}
-      </div>
-
-      <div class="mx-3 text-center">
-        <strong>Closes At:</strong><br>
-        {{ exam['closes_at'] if exam['closes_at'] else "Not set" }}
-      </div>
-
-      <!-- Security -->
-      <div class="mx-3 text-center">
-        <strong>Security:</strong><br>
-        {{ exam['security_settings'] or "Not set" }}
-        <br>
-        <a href="{{ url_for('examBp.set_security_ui', exam_id=exam['exam_id']) }}" 
-           class="btn btn-secondary btn-sm mt-1">
-          Edit
+        <strong>Security</strong><br>
+        <a href="{{ url_for('examBp.set_security_ui', exam_id=exam['exam_id']) }}"
+           class="btn btn-sm btn-secondary mt-1">
+           Edit
         </a>
       </div>
-
     </div>
 
     <hr>
 
-    <!-- Questions Table -->
+    <h4 class="text-center">Questions</h4>
+    <p class="text-center text-muted">Drag rows to reorder</p>
+
     <table class="table table-striped mt-3">
       <thead>
         <tr>
-          <th>Order</th>
+          <th>⇅</th>
           <th>Question</th>
           <th>Type</th>
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="sortable">
         {% for q in questions %}
-        <tr>
-          <td>{{ q['order_index'] }}</td>
+        <tr draggable="true" data-id="{{ q['question_id'] }}">
+          <td style="cursor: grab;">☰</td>
           <td>{{ q['question_text'] }}</td>
-          <td>{{ "Multiple Correct" if q['is_multiple_correct'] else "Single Correct" }}</td>
           <td>
-            <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id'], question_id=q['question_id']) }}" 
-               class="btn btn-light btn-sm">
-              Edit
-            </a>
-            <!-- Reordering button could be added later -->
+            {% if q['is_multiple_correct'] %}
+              Multiple Correct
+            {% else %}
+              Single Correct
+            {% endif %}
+          </td>
+          <td>
+            <a class="btn btn-sm btn-light" href="{{ url_for('examBp.edit_question_ui', question_id=q['question_id']) }}">Edit</a>
+
+            <form method="POST"
+                  action="{{ url_for('examBp.delete_question_ui', question_id=q['question_id']) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Delete this question?');">
+              <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <!-- Footer Buttons -->
     <div class="text-center mt-4">
-      <a href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id']) }}" 
-         class="btn btn-primary mr-2">
-        Add Question +
-      </a>
-
-      <a href="{{ url_for('examBp.preview_exam_ui', exam_id=exam['exam_id']) }}" 
-         class="btn btn-secondary">
-        Preview Exam
-      </a>
+      <a class="btn btn-primary" href="{{ url_for('examBp.add_question_ui', exam_id=exam['exam_id']) }}">Add Question</a>
+      <a class="btn btn-secondary ms-2" href="{{ url_for('examBp.preview_exam_ui', exam_id=exam['exam_id']) }}">Preview Exam</a>
     </div>
 
   </div>
 </div>
+
+<script>
+const tbody = document.getElementById("sortable");
+let dragged;
+
+tbody.addEventListener("dragstart", e => dragged = e.target.closest("tr"));
+tbody.addEventListener("dragover", e => {
+  e.preventDefault();
+  const row = e.target.closest("tr");
+  if (row && row !== dragged) tbody.insertBefore(dragged, row);
+});
+tbody.addEventListener("drop", async () => {
+
+  const order = [...tbody.querySelectorAll("tr")].map((r, i) => ({
+    question_id: r.dataset.id,
+    order_index: i + 1
+  }));
+
+  await fetch(`/exams/{{ exam['exam_id'] }}/reorder`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ order })
+  });
+
+  alert("Order saved.");
+});
+</script>
+
 {% endblock %}

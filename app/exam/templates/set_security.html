@@ -1,34 +1,36 @@
 {% extends "base.html" %}
-
-{% block title %}Configure Security{% endblock %}
+{% block title %}Security Settings{% endblock %}
 
 {% block main_content %}
 <div class="overlay-card-container">
   <div class="overlay-card">
-    <h3 class="text-center">Configure Security Settings</h3>
 
-    <form method="POST" action="">
+    <h3 class="text-center mb-3">Security Settings</h3>
+
+    {% set current = exam['security_settings'] | safe | loads %}
+
+    <form method="POST">
+
       <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="shuffle" id="shuffle"
-               {% if 'shuffle_questions' in current %}checked{% endif %}>
-        <label class="form-check-label" for="shuffle">
-          Shuffle Questions
-        </label>
+        <input type="checkbox" class="form-check-input" name="shuffle"
+               {% if "shuffle_questions" in current %}checked{% endif %}>
+        <label class="form-check-label">Shuffle Questions</label>
       </div>
 
       <div class="form-check mt-2">
-        <input class="form-check-input" type="checkbox" name="disable_copy" id="disable_copy"
-               {% if 'disable_copy_paste' in current %}checked{% endif %}>
-        <label class="form-check-label" for="disable_copy">
-          Disable Copy/Paste
-        </label>
+        <input type="checkbox" class="form-check-input" name="disable_copy"
+               {% if "disable_copy_paste" in current %}checked{% endif %}>
+        <label class="form-check-label">Disable Copy/Paste</label>
       </div>
 
       <div class="text-center mt-4">
-        <button type="submit" class="btn btn-primary mr-2">Save</button>
-        <a href="{{ url_for('examBp.edit_exam_ui', exam_id=exam_id) }}" class="btn btn-secondary">Exit</a>
+        <button class="btn btn-primary">Save</button>
+        <a href="{{ url_for('examBp.edit_exam_ui', exam_id=exam['exam_id']) }}"
+           class="btn btn-secondary ms-2">Back</a>
       </div>
+
     </form>
+
   </div>
 </div>
 {% endblock %}

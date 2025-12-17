@@ -1,14 +1,29 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, DateTimeLocalField
-from wtforms.validators import DataRequired, Optional
+from wtforms.validators import DataRequired, Email, Optional
 
 
 class ExamCreateForm(FlaskForm):
-    course_code = StringField("Course Code", validators=[DataRequired()])
-    instructor_email = StringField("Instructor Name or Email", validators=[DataRequired()])
-    title = StringField("Exam Title", validators=[DataRequired()])
+    # FIXED: No more instructor name allowed — email only
+    course_code = StringField(
+        "Course Code",
+        validators=[DataRequired(message="Course code is required.")]
+    )
 
-    # NEW: start and end date/time
+    instructor_email = StringField(
+        "Instructor Email",
+        validators=[
+            DataRequired(message="Instructor email is required."),
+            Email(message="Please enter a valid email address.")
+        ]
+    )
+
+    title = StringField(
+        "Exam Title",
+        validators=[DataRequired(message="Exam title is required.")]
+    )
+
+    # NEW: Start & end times (datetime-local)
     opens_at = DateTimeLocalField(
         "Opens At",
         format="%Y-%m-%dT%H:%M",
@@ -21,5 +36,10 @@ class ExamCreateForm(FlaskForm):
         validators=[DataRequired(message="Please select a closing date and time.")]
     )
 
-    security_settings = StringField("Security Settings", validators=[Optional()])
+    # Security settings stored as JSON or blank
+    security_settings = StringField(
+        "Security Settings (JSON)",
+        validators=[Optional()]
+    )
+
     submit = SubmitField("Create Exam")

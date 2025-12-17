@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Edit Question{% endblock %}
+
+{% block main_content %}
+<div class="card-container">
+  <div class="card-custom">
+
+    <h2>Edit Question</h2>
+
+    <form method="POST">
+
+      <label>Question Text</label>
+      <input type="text" class="form-control mb-3" name="question_text"
+             value="{{ q['question_text'] }}">
+
+      <label>
+        <input type="checkbox" name="is_multiple"
+               {% if q['is_multiple_correct'] %}checked{% endif %}>
+        Multiple Correct?
+      </label>
+
+      <hr>
+
+      <h5>Options</h5>
+
+      {% for opt in options %}
+      <div class="form-check mb-2">
+        <input type="checkbox" name="opt{{ loop.index }}_correct"
+               {% if opt['is_correct'] %}checked{% endif %}>
+        <input type="text" class="form-control mt-1"
+               name="opt{{ loop.index }}" value="{{ opt['option_text'] }}">
+      </div>
+      {% endfor %}
+
+      {% for i in range(options|length + 1, 5) %}
+      <div class="form-check mb-2">
+        <input type="checkbox" name="opt{{ i }}_correct">
+        <input type="text" class="form-control mt-1"
+               name="opt{{ i }}" placeholder="New option">
+      </div>
+      {% endfor %}
+
+      <button class="btn btn-primary mt-3">Save</button>
+      <a href="{{ url_for('examBp.edit_exam_ui', exam_id=q['exam_id']) }}"
+         class="btn btn-secondary mt-3 ms-2">Cancel</a>
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

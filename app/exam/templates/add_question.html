@@ -1,103 +1,73 @@
 {% extends "base.html" %}
-
 {% block title %}Add Question{% endblock %}
 
 {% block main_content %}
 <div class="card-container">
-  <div class="card">
+  <div class="card-custom">
 
-    <h1>Add Question</h1>
+    <h2>Add Question</h2>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category in ['danger','error'] else category }}">
-            {{ message }}
-          </div>
+    <form method="POST">
+
+      <label>Question Type</label>
+      <select name="question_type" id="question_type" class="form-control mb-3">
+        <option value="">Choose Type</option>
+        <option value="mcq">Multiple Choice</option>
+        <option value="true_false">True/False</option>
+        <option value="short">Short Answer</option>
+        <option value="numerical">Numerical</option>
+        <option value="essay">Essay</option>
+      </select>
+
+      <label>Question Text</label>
+      <input type="text" name="question_text" class="form-control mb-3">
+
+      <!-- MCQ -->
+      <div id="mcq_block" style="display:none;">
+        <h5>Options</h5>
+        {% for i in range(1,5) %}
+        <div class="form-check mb-2">
+          <input type="checkbox" name="opt{{ i }}_correct" class="form-check-input">
+          <input type="text" name="opt{{ i }}" class="form-control mt-1" placeholder="Option {{ i }}">
+        </div>
         {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <form method="POST" action="">
-
-      <div class="form-group">
-        <label>Question Type</label>
-        <select name="question_type" id="question_type" class="form-control">
-          <option value="">Choose Type</option>
-          <option value="mcq">Multiple Choice</option>
-          <option value="true_false">True/False</option>
-          <option value="short">Short Answer</option>
-          <option value="numerical">Numerical</option>
-          <option value="essay">Essay</option>
-        </select>
       </div>
 
-      <div class="form-group">
-        <label>Question Text</label>
-        <input type="text" name="question_text" class="form-control" placeholder="Question text">
-      </div>
-
-      <!-- MCQ block -->
-      <div id="mcq_block" style="display:none; margin-top:1rem;">
-        <label>Answer</label>
+      <!-- True/False -->
+      <div id="tf_block" style="display:none;">
+        <h5>Correct Answer</h5>
         <div class="form-check">
-          <input type="checkbox" name="opt1_correct" class="form-check-input" id="opt1c">
-          <input type="text" name="opt1" class="form-control" placeholder="Option 1">
+          <input type="radio" name="tf_answer" value="true"> True
         </div>
-        <div class="form-check mt-2">
-          <input type="checkbox" name="opt2_correct" class="form-check-input" id="opt2c">
-          <input type="text" name="opt2" class="form-control" placeholder="Option 2">
-        </div>
-        <div class="form-check mt-2">
-          <input type="checkbox" name="opt3_correct" class="form-check-input" id="opt3c">
-          <input type="text" name="opt3" class="form-control" placeholder="Option 3">
-        </div>
-        <div class="form-check mt-2">
-          <input type="checkbox" name="opt4_correct" class="form-check-input" id="opt4c">
-          <input type="text" name="opt4" class="form-control" placeholder="Option 4">
+        <div class="form-check">
+          <input type="radio" name="tf_answer" value="false"> False
         </div>
       </div>
 
-      <!-- True/False block -->
-      <div id="tf_block" style="display:none; margin-top:1rem;">
-        <label>Answer</label><br>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="tf_answer" id="tf_true" value="true">
-          <label class="form-check-label" for="tf_true">True</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="tf_answer" id="tf_false" value="false">
-          <label class="form-check-label" for="tf_false">False</label>
-        </div>
+      <!-- Text Answers -->
+      <div id="text_block" style="display:none;">
+        <h5>Expected Answer</h5>
+        <input type="text" name="text_answer" class="form-control mb-2">
       </div>
 
-      <!-- Short/Numerical/Essay block -->
-      <div id="text_block" style="display:none; margin-top:1rem;">
-        <label>Answer</label>
-        <input type="text" name="text_answer" class="form-control" placeholder="Answer text / value">
-      </div>
-
-      <div class="text-right mt-4">
-        <button type="submit" class="btn btn-primary">Done</button>
-      </div>
+      <button class="btn btn-primary mt-3">Add Question</button>
 
     </form>
   </div>
 </div>
 
 <script>
-  const selectEl = document.getElementById('question_type');
-  const mcqBlock = document.getElementById('mcq_block');
-  const tfBlock = document.getElementById('tf_block');
-  const textBlock = document.getElementById('text_block');
+const typeSelect = document.getElementById("question_type");
+const mcq = document.getElementById("mcq_block");
+const tf = document.getElementById("tf_block");
+const text = document.getElementById("text_block");
 
-  function updateBlocks() {
-    const val = selectEl.value;
-    mcqBlock.style.display = (val === 'mcq') ? 'block' : 'none';
-    tfBlock.style.display = (val === 'true_false') ? 'block' : 'none';
-    textBlock.style.display = (val === 'short' || val === 'numerical' || val === 'essay') ? 'block' : 'none';
-  }
-  selectEl.addEventListener('change', updateBlocks);
-  updateBlocks();
+typeSelect.addEventListener("change", () => {
+  mcq.style.display = typeSelect.value === "mcq" ? "block" : "none";
+  tf.style.display = typeSelect.value === "true_false" ? "block" : "none";
+  text.style.display = ["short","numerical","essay"].includes(typeSelect.value)
+                       ? "block" : "none";
+});
 </script>
+
 {% endblock %}

@@ -1,65 +1,48 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% block title %}Create Exam{% endblock %}
 
 {% block main_content %}
-<div class="card-container" style="display:flex; justify-content:center; margin-top:40px;">
-  <div class="card" style="width:450px; padding:40px; background:#e2e2e2; border-radius:20px;">
+<div class="card-container">
+  <div class="card-custom">
 
-    <h1 class="text-center" style="margin-bottom:20px;">Create Exam</h1>
-    <p class="text-center" style="margin-bottom:30px;">Start by entering course details</p>
+    <h2 class="text-center mb-4">Create a New Exam</h2>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category in ['danger','error'] else category }}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <form method="POST" action="">
+    <form method="POST">
       {{ form.hidden_tag() }}
 
-      <!-- Course Code -->
-      <div class="form-group mb-3">
+      <div class="mb-3">
         {{ form.course_code.label }}
-        {{ form.course_code(class="form-control", placeholder="Course code") }}
+        {{ form.course_code(class="form-control") }}
       </div>
 
-      <!-- Instructor Name or Email -->
-      <div class="form-group mb-3">
+      <div class="mb-3">
         {{ form.instructor_email.label }}
-        {{ form.instructor_email(class="form-control", placeholder="Instructor Name or Email") }}
+        {{ form.instructor_email(class="form-control") }}
       </div>
 
-      <!-- Hidden Title (default: Exam Name) -->
-      <div style="display:none;">
-        {{ form.title(class="form-control", value="Exam Name") }}
+      <div class="mb-3">
+        {{ form.title.label }}
+        {{ form.title(class="form-control") }}
       </div>
 
-      <!-- New START DATE/TIME -->
-      <div class="form-group mb-3">
-        <label for="opens_at">Exam Opens At</label>
-        <input type="datetime-local" name="opens_at" class="form-control" required>
+      <div class="mb-3">
+        {{ form.opens_at.label }}
+        {{ form.opens_at(class="form-control") }}
       </div>
 
-      <!-- New END DATE/TIME -->
-      <div class="form-group mb-3">
-        <label for="closes_at">Exam Closes At</label>
-        <input type="datetime-local" name="closes_at" class="form-control" required>
+      <div class="mb-3">
+        {{ form.closes_at.label }}
+        {{ form.closes_at(class="form-control") }}
       </div>
 
-      <!-- Security Settings (still hidden for now) -->
       <div style="display:none;">
         {{ form.security_settings(class="form-control") }}
       </div>
 
       <div class="text-center mt-4">
-        {{ form.submit(class="btn btn-primary", style="padding:10px 30px; border-radius:10px;") }}
+        {{ form.submit(class="btn btn-primary px-4") }}
       </div>
+
     </form>
 
   </div>
