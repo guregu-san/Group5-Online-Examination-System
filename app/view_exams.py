@@ -2,10 +2,7 @@ import sqlite3
 import json
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import current_user, login_required
-#from app import app
 
-
-# ---- DB helper ---- IDK WHAT THE HELL THIS IS FOR ----
 def get_db():
     conn = sqlite3.connect("oesDB.db")
     conn.row_factory = sqlite3.Row
@@ -15,53 +12,35 @@ def get_db():
 def row_to_dict(row):
     return {k: row[k] for k in row.keys()}
 
-
-# ---- Blueprint ---- IDK WHAT THE HELL THIS IS FOR ----
 exam_viewBp = Blueprint('exam_view', __name__, template_folder='templates')
 
-
-# U6-F1: List completed exams (results) for a student
 @exam_viewBp.route('/results', methods=['GET'])
 @login_required
 def list_results():
-    # Prefer current user when available:
-    # - Students should only see their own results (use current_user.roll_number)
-    # - Instructors will see results for exams they own (filtered by instructor_email) and can search by roll_number or student name
     roll_number = request.args.get('roll_number')
     course_code = request.args.get('course_code')
     instructor_name = request.args.get('instructor')
     student_name = request.args.get('student_name')
     student_roll = request.args.get('student_roll')
 
-    # If a logged-in student is requesting results, always use their roll_number
     if current_user.is_authenticated and getattr(current_user, "role", None) == "Student":
         roll_number = getattr(current_user, "roll_number", roll_number)
 
-    # If not a logged-in instructor and no roll_number available, require it
     if not roll_number and not (
         current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor"
     ):
-        return "roll_number query parameter is required for now", 400
+        return "roll_number query parameter is required", 400
 
     conn = get_db()
     cur = conn.cursor()
 
-    # Build SQL based on whether the current user is an instructor or we have a roll_number
     base_select = """
         SELECT
-            s.submission_id,
-            s.exam_id,
-            s.total_score,
+            s.submission_id, s.exam_id, s.total_score, s.status, s.submitted_at,
             (SELECT COALESCE(SUM(points),0) FROM questions q WHERE q.exam_id = e.exam_id) AS total_points,
-            s.status,
-            s.submitted_at,
-            e.title,
-            e.course_code,
-            c.course_name,
-            i.name AS instructor_name,
-            i.email AS instructor_email,
-            st.name AS student_name,
-            st.roll_number
+            e.title, e.course_code, c.course_name,
+            i.name AS instructor_name, i.email AS instructor_email,
+            st.name AS student_name, st.roll_number
         FROM submissions s
         JOIN exams e ON e.exam_id = s.exam_id
         JOIN courses c ON c.course_code = e.course_code
@@ -71,61 +50,41 @@ def list_results():
 
     params = []
 
-    # Determine which branch to use based on current user's actual role
     if current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor":
-        # Instructor view: show submissions for exams they own
         query = base_select + " WHERE e.instructor_email = ? AND s.status IN ('SUBMITTED', 'GRADED', 'IN_REVIEW', 'REVIEWED')"
         params = [current_user.email]
         
-        # Add instructor-specific search filters
         if course_code:
             query += " AND e.course_code LIKE ?"
             params.append(f"%{course_code}%")
-        
         if student_roll:
             query += " AND s.roll_number = ?"
             params.append(student_roll)
-        
         if student_name:
             query += " AND st.name LIKE ?"
             params.append(f"%{student_name}%")
     else:
-        # Student view: show only their own REVIEWED results
         if not roll_number:
-            # If student is logged in, use their roll_number
             roll_number = getattr(current_user, "roll_number", None)
-        
         if not roll_number:
             return "roll_number query parameter is required", 400
             
         query = base_select + " WHERE s.roll_number = ? AND s.status = 'REVIEWED'"
         params = [roll_number]
         
-        # Add student-specific search filters
         if course_code:
             query += " AND e.course_code LIKE ?"
             params.append(f"%{course_code}%")
-
         if instructor_name:
             query += " AND i.name LIKE ?"
             params.append(f"%{instructor_name}%")
 
     query += " ORDER BY s.submitted_at DESC"
-
-    print(f"DEBUG - User role: {getattr(current_user, 'role', 'NONE')}")
-    print(f"DEBUG - Query: {query}")
-    print(f"DEBUG - Params: {params}")
     
     cur.execute(query, params)
-    rows = cur.fetchall()
-    # convert rows to dicts
-    results = [row_to_dict(r) for r in rows]
-    
-    print(f"DEBUG - Results count: {len(results)}")
-    
+    results = [row_to_dict(r) for r in cur.fetchall()]
     conn.close()
 
-    # HTML-view
     return render_template(
         'view_results.html',
         results=results,
@@ -135,8 +94,6 @@ def list_results():
         current_user=current_user
     )
 
-
-# JSON API for testing
 @exam_viewBp.route('/api/results', methods=['GET'])
 def api_list_results():
     roll_number = request.args.get('roll_number')
@@ -220,10 +177,6 @@ def view_result_detail(submission_id):
     answers_json = sub["answers"] or "{}"
     answers = json.loads(answers_json)
 
-    # answers may be in two shapes:
-    # - dict mapping str(question_id) -> selected option id(s) (from take_exam)
-    # - list of answer dicts (from manual grading) where each entry may include
-    #   question_id, auto_points, manual_points, final_points, max_points, answer_text
     is_answers_map = isinstance(answers, dict)
     answers_by_q = {}
     if not is_answers_map and isinstance(answers, list):
@@ -234,7 +187,6 @@ def view_result_detail(submission_id):
                 continue
             answers_by_q[qid] = a
 
-    # if not graded or reviewed, show message
     if status not in ("GRADED", "REVIEWED"):
         conn.close()
         return render_template(
@@ -245,7 +197,6 @@ def view_result_detail(submission_id):
             total_score=None
         )
 
-    # fetch questions + options
     cur.execute("""
         SELECT q.question_id, q.question_text, q.points, q.is_multiple_correct,
                o.option_id, o.option_text, o.is_correct

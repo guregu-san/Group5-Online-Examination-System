@@ -1,67 +1,123 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-
 
 {%block title%} Exam Result {%endblock%}
 
-
 {%block main_content%}
-
-<div class="card-container">
-    <div class="card wide">
+<div class="row">
+    <div class="col-lg-10 col-xl-9 mx-auto">
         {% if message %}
-            <h2 class="not-graded">{{ message }}</h2>
-            {% if current_user.role == 'Instructor' %}
-            <a href="/results" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
-            {% else %}
-            <a href="/results?roll_number={{ request.args.get('roll_number') }}" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
-            {% endif %}
-        {% else %}
-
-            <h1>{{ exam.title }} <small>({{ exam.course_code }})</small></h1>
-            {% set total_possible = total_possible if total_possible is defined else 0 %}
-            <p><strong>Total Score:</strong> {% if total_score is not none %}{{ total_score }} / {{ total_possible }}{% else %}- / {{ total_possible }}{% endif %}</p>
-
-            {% if feedback %}
-            <div class="feedback-box">
-                <h2>Feedback</h2>
-                <p>{{ feedback }}</p>
-            </div>
-            {% endif %}
-
-            <hr>
-
-            {% for q in questions %}
-                <div class="question-box">
-                    <h3>Q{{ loop.index }}: {{ q.question_text }}</h3>
-                    <p><strong>Points:</strong> {{ q.earned_points }} / {{ q.points }}</p>
-
-                    {% for opt in q.options %}
-                        <div class="option">
-                            {% if opt.selected_by_student %}
-                                <span class="selected">✔ {{ opt.option_text }}</span>
+            <div class="alert alert-warning text-center" role="alert">
+                <i class="glyphicon glyphicon-exclamation-sign"></i>
+                <h4 class="mt-2">{{ message }}</h4>
+                <div class="mt-4">
+                            {% if current_user.role == 'Instructor' %}
+                                <a href="/results" class="btn btn-lg btn-secondary">
+                                    <i class="glyphicon glyphicon-arrow-left"></i> Back to Results
+                                </a>
                             {% else %}
-                                {{ opt.option_text }}
+                                <a href="/results?roll_number={{ request.args.get('roll_number') }}" class="btn btn-lg btn-secondary">
+                                    <i class="glyphicon glyphicon-arrow-left"></i> Back to Results
+                                </a>
                             {% endif %}
-
-                            {% if opt.is_correct %}
-                                <span class="correct"> (correct)</span>
+            </div>
+        </div>
+        {% else %}
+            <h3 class="mb-4">
+                <i class="glyphicon glyphicon-list-alt"></i> {{ exam.title }}
+                <small class="text-muted ms-2">({{ exam.course_code }})</small>
+            </h3>
+                        <!-- Score Summary -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-body text-center bg-light">
+                                        <h5 class="text-secondary mb-2">Total Score</h5>
+                                        <h2 class="mb-0">
+                                            {% set total_possible = total_possible if total_possible is defined else 0 %}
+                                            {% if total_score is not none %}
+                                                <span class="text-primary">{{ total_score }}</span>
+                                                <span class="text-muted">/ {{ total_possible }}</span>
+                                            {% else %}
+                                                <span class="text-muted">- / {{ total_possible }}</span>
+                                            {% endif %}
+                                        </h2>
+                                        {% if total_score is not none and total_possible > 0 %}
+                                            {% set percentage = (total_score / total_possible * 100)|round(1) %}
+                                            <div class="progress mt-3" style="height: 25px;">
+                                                <div class="progress-bar {% if percentage >= 70 %}bg-success{% elif percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                     style="width: {{ percentage }}%">
+                                                    {{ percentage }}%
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if feedback %}
+                            <div class="col-md-6">
+                                <div class="card border-warning h-100">
+                                    <div class="card-body">
+                                        <h5 class="text-warning">
+                                            <i class="glyphicon glyphicon-comment"></i> Instructor Feedback
+                                        </h5>
+                                        <p class="mb-0">{{ feedback }}</p>
+                                    </div>
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
-                    {% endfor %}
 
-                </div>
-            {% endfor %}
+                        <hr>
 
-            {% if current_user.role == 'Instructor' %}
-            <a href="/results" style="display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
-            {% else %}
-            <a href="/results?roll_number={{ request.args.get('roll_number') }}" style="display: inline-block; margin-top: 30px; padding: 10px 20px; background-color: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#4b5563'" onmouseout="this.style.backgroundColor='#6b7280'">← Back to Results</a>
-            {% endif %}
+                        <!-- Questions -->
+                        <h4 class="mb-4 text-secondary">
+                            <i class="glyphicon glyphicon-question-sign"></i> Questions & Answers
+                        </h4>
+                        {% for q in questions %}
+                        <div class="card mb-4 border-start border-5 {% if q.earned_points == q.points %}border-success{% elif q.earned_points > 0 %}border-warning{% else %}border-danger{% endif %}">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Question {{ loop.index }}</h5>
+                                <span class="badge bg-{% if q.earned_points == q.points %}success{% elif q.earned_points > 0 %}warning{% else %}danger{% endif %} fs-6">
+                                    {{ q.earned_points }} / {{ q.points }} points
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <p class="fw-semibold mb-3">{{ q.question_text }}</p>
+                                <div class="list-group">
+                                    {% for opt in q.options %}
+                                    <div class="list-group-item {% if opt.selected_by_student and opt.is_correct %}list-group-item-success{% elif opt.selected_by_student and not opt.is_correct %}list-group-item-danger{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                {% if opt.selected_by_student %}
+                                                    <i class="glyphicon glyphicon-ok-circle text-primary"></i>
+                                                {% endif %}
+                                                {{ opt.option_text }}
+                                            </span>
+                                            {% if opt.is_correct %}
+                                                <span class="badge bg-success">Correct Answer</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
 
+                        <!-- Back Button -->
+                        <div class="text-center mt-4">
+                            {% if current_user.role == 'Instructor' %}
+                                <a href="/results" class="btn btn-lg btn-secondary px-5">
+                                    <i class="glyphicon glyphicon-arrow-left"></i> Back to Results
+                                </a>
+                            {% else %}
+                                <a href="/results?roll_number={{ request.args.get('roll_number') }}" class="btn btn-lg btn-secondary px-5">
+                                    <i class="glyphicon glyphicon-arrow-left"></i> Back to Results
+                                </a>
+                            {% endif %}
+                        </div>
         {% endif %}
     </div>
 </div>
-
 {%endblock%}
 

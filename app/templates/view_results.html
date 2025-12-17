@@ -1,121 +1,128 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-
 
 {%block title%} Exams {%endblock%}
 
-
 {%block main_content%}
-<div class="card-container">
-    <div class="card wide">
-        <h1>Exams</h1>
+<h3 class="mb-4"><i class="glyphicon glyphicon-education"></i> Exam Results</h3>
 
-        <div class="filter-box" style="background: #f9fafb; padding: 18px; border-radius: 8px; border: 1px solid #e5e7eb;">
-    <form method="get">
-        <input type="hidden" name="roll_number" value="{{ roll_number }}">
-
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
-            {% if current_user.role == 'Instructor' %}
-                <!-- Instructor search filters -->
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #374151;">Course Code:</label>
-                    <input type="text" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101" autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                </div>
-
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #374151;">Student ID:</label>
-                    <input type="text" name="student_roll" value="{{ request.args.get('student_roll', '') }}" placeholder="e.g. 12345" autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                </div>
-
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #374151;">Student Name:</label>
-                    <input type="text" name="student_name" value="{{ request.args.get('student_name', '') }}" placeholder="Student name" autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                </div>
-            {% else %}
-                <!-- Student search filters -->
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #374151;">Course Code:</label>
-                    <input type="text" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101" autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                </div>
-
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #374151;">Instructor:</label>
-                    <input type="text" name="instructor" value="{{ instructor_name }}" placeholder="Instructor name" autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                </div>
-            {% endif %}
-
-            <button type="submit" style="padding: 10px 24px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Search</button>
-        </div>
-    </form>
-        </div>
-
-        <div style="overflow-x:auto; margin-top: 20px;">
-            <table style="box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border-radius: 8px; overflow: hidden;">
-    <tr style="background-color: #f3f4f6;">
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Exam Title</th>
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Course</th>
-        {% if current_user.role == 'Instructor' %}
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Student ID</th>
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Student Name</th>
-        {% else %}
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Instructor</th>
-        {% endif %}
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Status</th>
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Score</th>
-        <th style="background-color: #f3f4f6; font-weight: 600; color: #1f2937; padding: 12px;">Actions</th>
-    </tr>
-
-    {% for r in results %}
-    <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor=''">
-        <td style="padding: 12px; color: #1f2937;">{{ r.title }}</td>
-        <td style="padding: 12px; color: #1f2937;">{{ r.course_code }}</td>
-        {% if current_user.role == 'Instructor' %}
-        <td style="padding: 12px; color: #1f2937;">{{ r.roll_number }}</td>
-        <td style="padding: 12px; color: #1f2937;">{{ r.student_name }}</td>
-        {% else %}
-        <td style="padding: 12px; color: #1f2937;">{{ r.instructor_name }}</td>
-        {% endif %}
-        <td style="padding: 12px;"><span style="display: inline-block; background-color: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">{{ r.status }}</span></td>
-        <td style="padding: 12px; color: #1f2937; font-weight: 500;">
-            {% set total = r.total_points if r.total_points is not none else 0 %}
-            {% if r.total_score is not none %}
-                {{ r.total_score }} / {{ total }}
-            {% else %}
-                - / {{ total }}
-            {% endif %}
-        </td>
-        <td style="padding: 12px;">
-            {% if current_user.role == 'Instructor' %}
-                {% if r.status == 'REVIEWED' or r.status == 'GRADED' %}
-                <a href="/results/{{ r.submission_id }}" style="display: inline-block; background-color: #2563eb; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#1d4ed8'; this.style.boxShadow='0 4px 6px rgba(37, 99, 235, 0.3)'" onmouseout="this.style.backgroundColor='#2563eb'; this.style.boxShadow='none'">
-                    View
-                </a>
-                {% elif r.status == 'SUBMITTED' %}
-                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" style="display: inline-block; background-color: #10b981; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#059669'; this.style.boxShadow='0 4px 6px rgba(16, 185, 129, 0.3)'" onmouseout="this.style.backgroundColor='#10b981'; this.style.boxShadow='none'">
-                    Grade
-                </a>
-                {% elif r.status == 'IN_REVIEW' %}
-                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#d97706'; this.style.boxShadow='0 4px 6px rgba(245, 158, 11, 0.3)'" onmouseout="this.style.backgroundColor='#f59e0b'; this.style.boxShadow='none'">
-                    Edit
-                </a>
+<!-- Search Filters -->
+<div class="card mb-4 border-0 bg-light">
+    <div class="card-body">
+        <form method="get">
+            <input type="hidden" name="roll_number" value="{{ roll_number }}">
+            <div class="row g-3 align-items-end">
+                {% if current_user.role == 'Instructor' %}
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-secondary">Course Code</label>
+                        <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-secondary">Student ID</label>
+                        <input type="text" class="form-control" name="student_roll" value="{{ request.args.get('student_roll', '') }}" placeholder="e.g. 12345">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-secondary">Student Name</label>
+                        <input type="text" class="form-control" name="student_name" value="{{ request.args.get('student_name', '') }}" placeholder="Student name">
+                    </div>
+                {% else %}
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">Course Code</label>
+                        <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">Instructor</label>
+                        <input type="text" class="form-control" name="instructor" value="{{ instructor_name }}" placeholder="Instructor name">
+                    </div>
                 {% endif %}
-            {% else %}
-            <a href="/results/{{ r.submission_id }}?roll_number={{ roll_number }}" style="display: inline-block; background-color: #2563eb; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#1d4ed8'; this.style.boxShadow='0 4px 6px rgba(37, 99, 235, 0.3)'" onmouseout="this.style.backgroundColor='#2563eb'; this.style.boxShadow='none'">
-                View
-            </a>
-            {% endif %}
-        </td>
-    </tr>
-        {% endfor %}
-                </table>
-                {% if not results %}
-                <div style="text-align: center; padding: 40px; color: #6b7280;">
-                    <p style="font-size: 16px;">No reviewed exams found.</p>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="glyphicon glyphicon-search"></i> Search
+                    </button>
                 </div>
-                {% endif %}
             </div>
-
-        </div>
+        </form>
     </div>
+</div>
 
+<!-- Results Table -->
+<div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Exam Title</th>
+                                    <th>Course</th>
+                                    {% if current_user.role == 'Instructor' %}
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    {% else %}
+                                    <th>Instructor</th>
+                                    {% endif %}
+                                    <th>Status</th>
+                                    <th class="text-center">Score</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in results %}
+                                <tr>
+                                    <td class="fw-semibold">{{ r.title }}</td>
+                                    <td><span class="badge bg-secondary">{{ r.course_code }}</span></td>
+                                    {% if current_user.role == 'Instructor' %}
+                                    <td>{{ r.roll_number }}</td>
+                                    <td>{{ r.student_name }}</td>
+                                    {% else %}
+                                    <td>{{ r.instructor_name }}</td>
+                                    {% endif %}
+                                    <td>
+                                        {% if r.status == 'REVIEWED' %}
+                                            <span class="badge bg-success">{{ r.status }}</span>
+                                        {% elif r.status == 'GRADED' %}
+                                            <span class="badge bg-info">{{ r.status }}</span>
+                                        {% elif r.status == 'IN_REVIEW' %}
+                                            <span class="badge bg-warning text-dark">{{ r.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">{{ r.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <strong class="text-primary">
+                                            {% set total = r.total_points if r.total_points is not none else 0 %}
+                                            {% if r.total_score is not none %}
+                                                {{ r.total_score }} / {{ total }}
+                                            {% else %}
+                                                - / {{ total }}
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if current_user.role == 'Instructor' %}
+                                            {% if r.status == 'REVIEWED' or r.status == 'GRADED' %}
+                                                <a href="/results/{{ r.submission_id }}" class="btn btn-sm btn-primary">
+                                                    <i class="glyphicon glyphicon-eye-open"></i> View
+                                                </a>
+                                            {% elif r.status == 'SUBMITTED' %}
+                                                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" class="btn btn-sm btn-success">
+                                                    <i class="glyphicon glyphicon-edit"></i> Grade
+                                                </a>
+                                            {% elif r.status == 'IN_REVIEW' %}
+                                                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" class="btn btn-sm btn-warning">
+                                                    <i class="glyphicon glyphicon-pencil"></i> Edit
+                                                </a>
+                                            {% endif %}
+                                        {% else %}
+                                            <a href="/results/{{ r.submission_id }}?roll_number={{ roll_number }}" class="btn btn-sm btn-primary">
+                                                <i class="glyphicon glyphicon-eye-open"></i> View
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+            </tbody>
+        </table>
+        {% if not results %}
+        <div class="alert alert-info text-center my-4" role="alert">
+            <i class="glyphicon glyphicon-info-sign"></i> No exams found. Try adjusting your search filters.
+        </div>
+        {% endif %}
+    </div>
 {%endblock%}
