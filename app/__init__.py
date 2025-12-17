@@ -59,7 +59,7 @@ from app import home
 from app.auth.auth import authBp
 from app.exam.exam import examBp
 from .take_exam.take_exam import take_examBp
-from .view_exams import exam_viewBp
+from .view_result.view_exams import exam_viewBp
 from .exam_create import exam_createBp
 from app.manual_grading.grading_ui import gradingUiBp
 from app.manual_grading.manual_grading import manualGradingBp
