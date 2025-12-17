@@ -2,6 +2,11 @@
 
 {%block title%}OES{%endblock%}
 
+{% block metas %}
+{{ super() }}
+<meta charset="UTF-8">
+{% endblock %}
+
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -37,7 +42,7 @@
 <div class="container-fluid">
     <div class="row">
         {% if current_user.is_authenticated %}
-        <div class="col-sm-3 col-md-2 sidebar">
+        <div class="col-xs-12 col-sm-3 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
                 <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
                 <li><a href="{{ url_for('exam_view.list_results') }}"> View Exams </a></li>
@@ -53,28 +58,27 @@
                 {% endif %}
             </ul>
         </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-            {% else %}
-            <div class="col-sm-12 main">
-                {% endif %}
+        <div class="col-xs-12 col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        {% else %}
+            <div class="col-xs-12 col-sm-12 main">
+            {% endif %}
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
                     {% for category, message in messages %}
-                      <div class="alert alert-{{ category }} alert-dismissible" role="alert">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        {{ message }}
-                      </div>
+                        <div class="alert alert-{{ category }} alert-dismissible" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            {{ message }}
+                        </div>
                     {% endfor %}
-                  {% endif %}
-                {% endwith %}
+                {% endif %}
+            {% endwith %}
 
-                {% block main_content %}{% endblock %}
+            {% block main_content %}{% endblock %}
             </div>
         </div>
     </div>
-
-
-
-
-    {%endblock%}
+</div>
+{%endblock%}

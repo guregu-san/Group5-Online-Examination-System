@@ -97,10 +97,11 @@ body {
  * Sidebar
  */
 
-/* Hide for mobile, show later */
+/* Hide for mobile, show later
 .sidebar {
   display: none;
 }
+*/
 
 @media (min-width: 768px) {
   .sidebar {
@@ -243,7 +244,7 @@ a:hover {
 
   align-items: center;
   justify-content: center;
-  
+
   height: 100vh;
   width: 100vw;
 }
