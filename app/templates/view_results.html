@@ -91,11 +91,11 @@
                     View
                 </a>
                 {% elif r.status == 'SUBMITTED' %}
-                <a href="/results/{{ r.submission_id }}" style="display: inline-block; background-color: #10b981; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#059669'; this.style.boxShadow='0 4px 6px rgba(16, 185, 129, 0.3)'" onmouseout="this.style.backgroundColor='#10b981'; this.style.boxShadow='none'">
+                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" style="display: inline-block; background-color: #10b981; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#059669'; this.style.boxShadow='0 4px 6px rgba(16, 185, 129, 0.3)'" onmouseout="this.style.backgroundColor='#10b981'; this.style.boxShadow='none'">
                     Grade
                 </a>
                 {% elif r.status == 'IN_REVIEW' %}
-                <a href="/results/{{ r.submission_id }}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#d97706'; this.style.boxShadow='0 4px 6px rgba(245, 158, 11, 0.3)'" onmouseout="this.style.backgroundColor='#f59e0b'; this.style.boxShadow='none'">
+                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#d97706'; this.style.boxShadow='0 4px 6px rgba(245, 158, 11, 0.3)'" onmouseout="this.style.backgroundColor='#f59e0b'; this.style.boxShadow='none'">
                     Edit
                 </a>
                 {% endif %}
