@@ -1,79 +1,103 @@
 {% extends "base.html" %}
 
-{%block title%} Exams {%endblock%}
+{% block title %}Exams{% endblock %}
 
-{%block main_content%}
-<h3 class="mb-4"><i class="glyphicon glyphicon-education"></i> Exam Results</h3>
+{% block main_content %}
+<style>
+    .view-results-card {
+        max-width: 100% !important;
+    }
+</style>
 
-<!-- Search Filters -->
-<div class="card mb-4 border-0 bg-light">
-    <div class="card-body">
-        <form method="get">
-            <input type="hidden" name="roll_number" value="{{ roll_number }}">
-            <div class="row g-3 align-items-end">
-                {% if current_user.role == 'Instructor' %}
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold text-secondary">Course Code</label>
-                        <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold text-secondary">Student ID</label>
-                        <input type="text" class="form-control" name="student_roll" value="{{ request.args.get('student_roll', '') }}" placeholder="e.g. 12345">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold text-secondary">Student Name</label>
-                        <input type="text" class="form-control" name="student_name" value="{{ request.args.get('student_name', '') }}" placeholder="Student name">
-                    </div>
-                {% else %}
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary">Course Code</label>
-                        <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-secondary">Instructor</label>
-                        <input type="text" class="form-control" name="instructor" value="{{ instructor_name }}" placeholder="Instructor name">
-                    </div>
-                {% endif %}
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="glyphicon glyphicon-search"></i> Search
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+<!-- Header -->
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0">
+        <i class="glyphicon glyphicon-education me-2"></i>
+        Exam Results
+    </h2>
 </div>
 
-<!-- Results Table -->
-<div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-dark">
+    <!-- Search Filters -->
+    <div class="card view-results-card mb-4 shadow-sm">
+        <div class="card-body">
+            <form method="get">
+                <input type="hidden" name="roll_number" value="{{ roll_number }}">
+                <div class="row g-3 align-items-end">
+                    {% if current_user.role == 'Instructor' %}
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary mb-2">Course Code</label>
+                            <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary mb-2">Student ID</label>
+                            <input type="text" class="form-control" name="student_roll" value="{{ request.args.get('student_roll', '') }}" placeholder="e.g. 12345">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary mb-2">Student Name</label>
+                            <input type="text" class="form-control" name="student_name" value="{{ request.args.get('student_name', '') }}" placeholder="Student name">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="glyphicon glyphicon-search me-1"></i> Search
+                            </button>
+                        </div>
+                    {% else %}
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary mb-2">Course Code</label>
+                            <input type="text" class="form-control" name="course_code" value="{{ course_code }}" placeholder="e.g. CSC101">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary mb-2">Instructor</label>
+                            <input type="text" class="form-control" name="instructor" value="{{ instructor_name }}" placeholder="Instructor name">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="glyphicon glyphicon-search me-1"></i> Search
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card view-results-card shadow-sm">
+        <div class="card-body p-0">
+            {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="px-4 py-3">Exam Title</th>
+                                <th class="px-4 py-3">Course</th>
+                                {% if current_user.role == 'Instructor' %}
+                                    <th class="px-4 py-3">Student ID</th>
+                                    <th class="px-4 py-3">Student Name</th>
+                                {% else %}
+                                    <th class="px-4 py-3">Instructor</th>
+                                {% endif %}
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3 text-center">Score</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
                                 <tr>
-                                    <th>Exam Title</th>
-                                    <th>Course</th>
+                                    <td class="px-4 py-3">
+                                        <div class="fw-semibold">{{ r.title }}</div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="badge bg-secondary">{{ r.course_code }}</span>
+                                    </td>
                                     {% if current_user.role == 'Instructor' %}
-                                    <th>Student ID</th>
-                                    <th>Student Name</th>
+                                        <td class="px-4 py-3">{{ r.roll_number }}</td>
+                                        <td class="px-4 py-3">{{ r.student_name }}</td>
                                     {% else %}
-                                    <th>Instructor</th>
+                                        <td class="px-4 py-3">{{ r.instructor_name }}</td>
                                     {% endif %}
-                                    <th>Status</th>
-                                    <th class="text-center">Score</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in results %}
-                                <tr>
-                                    <td class="fw-semibold">{{ r.title }}</td>
-                                    <td><span class="badge bg-secondary">{{ r.course_code }}</span></td>
-                                    {% if current_user.role == 'Instructor' %}
-                                    <td>{{ r.roll_number }}</td>
-                                    <td>{{ r.student_name }}</td>
-                                    {% else %}
-                                    <td>{{ r.instructor_name }}</td>
-                                    {% endif %}
-                                    <td>
+                                    <td class="px-4 py-3">
                                         {% if r.status == 'REVIEWED' %}
                                             <span class="badge bg-success">{{ r.status }}</span>
                                         {% elif r.status == 'GRADED' %}
@@ -84,8 +108,8 @@
                                             <span class="badge bg-primary">{{ r.status }}</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-center">
-                                        <strong class="text-primary">
+                                    <td class="px-4 py-3 text-center">
+                                        <strong class="text-primary fs-6">
                                             {% set total = r.total_points if r.total_points is not none else 0 %}
                                             {% if r.total_score is not none %}
                                                 {{ r.total_score }} / {{ total }}
@@ -94,35 +118,41 @@
                                             {% endif %}
                                         </strong>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="px-4 py-3 text-center">
                                         {% if current_user.role == 'Instructor' %}
                                             {% if r.status == 'REVIEWED' or r.status == 'GRADED' %}
                                                 <a href="/results/{{ r.submission_id }}" class="btn btn-sm btn-primary">
-                                                    <i class="glyphicon glyphicon-eye-open"></i> View
+                                                    <i class="glyphicon glyphicon-eye-open me-1"></i> View
                                                 </a>
                                             {% elif r.status == 'SUBMITTED' %}
                                                 <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" class="btn btn-sm btn-success">
-                                                    <i class="glyphicon glyphicon-edit"></i> Grade
+                                                    <i class="glyphicon glyphicon-edit me-1"></i> Grade
                                                 </a>
                                             {% elif r.status == 'IN_REVIEW' %}
-                                                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" class="btn btn-sm btn-warning">
-                                                    <i class="glyphicon glyphicon-pencil"></i> Edit
+                                                <a href="{{ url_for('gradingUiBp.grading_submission_review', submission_id=r.submission_id) }}" class="btn btn-sm btn-warning text-dark">
+                                                    <i class="glyphicon glyphicon-pencil me-1"></i> Edit
                                                 </a>
                                             {% endif %}
                                         {% else %}
                                             <a href="/results/{{ r.submission_id }}?roll_number={{ roll_number }}" class="btn btn-sm btn-primary">
-                                                <i class="glyphicon glyphicon-eye-open"></i> View
+                                                <i class="glyphicon glyphicon-eye-open me-1"></i> View
                                             </a>
                                         {% endif %}
                                     </td>
                                 </tr>
-                                {% endfor %}
-            </tbody>
-        </table>
-        {% if not results %}
-        <div class="alert alert-info text-center my-4" role="alert">
-            <i class="glyphicon glyphicon-info-sign"></i> No exams found. Try adjusting your search filters.
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="glyphicon glyphicon-info-sign text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="text-muted">No exams found</h5>
+                    <p class="text-muted small">Try adjusting your search filters</p>
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-{%endblock%}
+{% endblock %}
