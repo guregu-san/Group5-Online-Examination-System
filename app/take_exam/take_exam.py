@@ -29,8 +29,9 @@ from flask_login import current_user, login_required
 
 # Built-in Python imports
 import random
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
+import os
 
 # Local Imports
 from app.take_exam.forms import ExamSearchForm, ExamInitializationForm, SubmissionForm
@@ -38,6 +39,10 @@ from app.models import db, Instructors, Exams, Questions, Options, Submissions
 
 # Instantiate blueprint
 take_examBp = Blueprint("take_examBp", __name__, url_prefix="/take_exam",  template_folder="templates")
+
+# Constant initialization
+AUTOSAVE_INTERVAL = int(os.getenv('AUTOSAVE_INTERVAL'))
+AUTOSAVE_GRACE_PERIOD = int(os.getenv('AUTOSAVE_GRACE_PERIOD'))
 
 # Helper function
 def finalize_submission(submission, answers, questions):
@@ -113,11 +118,7 @@ def initialization():
         current_exam_id = submission.exam_id
         session['current_exam_id'] = submission.exam_id
 
-        # If the latest update was within the autosave window, it means the student
-        # is currently taking the exam on another browser tab (already has a session)
-        # TODO: Replace magic number(autosave interval + small grace period to account for autosave delays)
-        #       with proper const variables that are set in .conf
-        taking_exam_now = (int((current_datetime - submission.updated_at).total_seconds()) <= 7)
+        taking_exam_now = (int((current_datetime - submission.updated_at).total_seconds()) <= (AUTOSAVE_INTERVAL + AUTOSAVE_GRACE_PERIOD))
     else:
         # Validate the cookie that was set in exam search
         current_exam_id = session.get('current_exam_id')
@@ -296,6 +297,7 @@ def start():
 
         if (form.submit_flag.data == "1"):
             finalize_submission(submission, answers, questions)
+            flash('Submitted successfully!', 'success')
 
         session.pop('current_submission_id', None)
         session.pop('current_exam_id', None)
@@ -307,7 +309,7 @@ def start():
 
     return render_template(
         'submission.html', form=form, exam=exam, questions=questions, feedback=submission.feedback,
-        remaining_seconds=int((exam.closes_at - datetime.utcnow()).total_seconds())
+        remaining_seconds=int((exam.closes_at - datetime.utcnow()).total_seconds()), interval=(AUTOSAVE_INTERVAL * 1000) # The interval is needed in ms for the template
     )
 
 

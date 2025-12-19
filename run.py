@@ -2,6 +2,7 @@ import os
 from app import app, scheduler
 from app.scheduler import set_exam_timers
 
+ACTIVE_EXAM_CHECK_INTERVAL=int(os.getenv('ACTIVE_EXAM_CHECK_INTERVAL'))
 
 #----------------------------------------
 # launch
@@ -17,7 +18,7 @@ if __name__ == "__main__":
             id="schedule_timers",
             func=set_exam_timers,
             trigger="interval",
-            seconds=5, # Less than 1 min for testing
+            seconds=ACTIVE_EXAM_CHECK_INTERVAL,
             replace_existing=True
         )
 

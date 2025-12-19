@@ -74,5 +74,3 @@ app.register_blueprint(exam_viewBp)
 app.register_blueprint(exam_createBp)
 app.register_blueprint(gradingUiBp)
 app.register_blueprint(manualGradingBp)
-
-

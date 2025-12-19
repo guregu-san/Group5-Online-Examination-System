@@ -1,10 +1,13 @@
 # Built-in Python import
 from datetime import datetime, timezone, timedelta
+import os
 
 # Local Imports
 from app import app, scheduler, db
 from app.models import Exams, Questions, Submissions
 from app.take_exam.take_exam import finalize_submission
+
+AUTOSAVE_GRACE_PERIOD=int(os.getenv('AUTOSAVE_GRACE_PERIOD'))
 
 def close_exam(exam_id):
     """
@@ -46,7 +49,7 @@ def set_exam_timers():
             job = scheduler.get_job(job_id)
 
             # Added delay so autosave will have time to run one last time on exam expiration
-            expiration = exam.closes_at + timedelta(seconds=5)
+            expiration = exam.closes_at + timedelta(seconds=AUTOSAVE_GRACE_PERIOD)
 
             # If the exam doesn't already have a timer, set one,
             # or if it has one but it doesn't match with the close time update it

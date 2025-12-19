@@ -102,6 +102,7 @@
                 const confirmBtn = document.getElementById("confirmSubmit");
                 const cancelBtn = document.getElementById("cancelSubmit");
                 const modal = document.getElementById("submitConfirmModal");
+                const autosaveInterval = {{ interval or 5000 }};
                 let timerEl = document.getElementById("timer");
                 let feedback = {{ (feedback or "") | tojson }};
                 const tab_switch_detection_enabled = {{ exam.security_settings.no_tab_switching | tojson }};
@@ -138,7 +139,7 @@
                 /* Periodic Autosave */
                 window.autosaveInterval = setInterval(() => {
                     autosave("progress").then(() => console.log("Autosaved"));
-                }, 5000);
+                }, autosaveInterval);
 
                 /* Timer */
                 let remaining = parseInt(timerEl.dataset.remaining || "0", 10);
@@ -269,7 +270,7 @@
       </div>
       <div class="modal-body">
         <p>
-            Your time for this exam has ran out.
+            Your time for this exam has run out.
             Your attempt has been saved and submitted.
         </p>
       </div>
