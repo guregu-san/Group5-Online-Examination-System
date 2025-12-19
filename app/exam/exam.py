@@ -415,17 +415,25 @@ def set_security_ui(exam_id):
         flash("Security updated!", "success")
         return redirect(url_for("examBp.edit_exam_ui", exam_id=exam_id))
 
+    # -------- GET REQUEST --------
     cur.execute("SELECT * FROM exams WHERE exam_id = ?", (exam_id,))
-    exam = cur.fetchone()
-
+    row = cur.fetchone()
     conn.close()
 
-    if not exam:
+    if not row:
         flash("Exam not found.", "danger")
         return redirect(url_for("examBp.create_exam_ui"))
 
-    return render_template("set_security.html", exam=exam, exam_id=exam_id)
+    # ALWAYS define exam
+    exam = dict(row)
 
+    # Safely parse JSON
+    try:
+        exam["security_settings"] = json.loads(exam["security_settings"] or "[]")
+    except json.JSONDecodeError:
+        exam["security_settings"] = []
+
+    return render_template("set_security.html", exam=exam, exam_id=exam_id)
 
 # -----------------------------
 # AVAILABILITY UI
