@@ -1,22 +1,76 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
+{% block title %}Dashboard{% endblock %}
 
-{%block title%} Dashboard {%endblock%}
+{% block main_content %}
 
-{%block main_content%}
-    <div class="card-container">
-        <div class="card text-center">
-            <h1>Welcome, {{ user.name }}!</h1>
-            <br>
-            <h4>Your Information:</h4>
-            <p><strong>Name:</strong> {{ user.name }}</p>
-            <p><strong>Email:</strong> {{ user.email }}</p>
-            <p>You are logged in as a {{ user.role }}.</p>
-            {% if user.role == 'Student' %}
-            <p><strong>Roll Number:</strong> {{ user.roll_number }}</p>
-            <p><strong>Contact Number:</strong> {{ user.contact_number }}</p>
-            {% endif %}
-        </div>
+<div class="card-container">
+  <div class="card wide dashboard-shell">
+
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h1>Welcome, {{ user.name }}</h1>
+      <p class="role-label">Logged in as {{ user.role }}</p>
     </div>
-{%endblock%}
+
+    <!-- Cards -->
+    <div class="dashboard-grid">
+
+      <!-- Profile -->
+      <div class="dashboard-card profile-card">
+        <div class="card-title">
+          <i class="fa-solid fa-user"></i>
+          Profile
+        </div>
+
+        <div class="card-content">
+          <p><span>Email: </span>{{ user.email }}</p>
+
+          {% if user.role == 'Student' %}
+            <p><span>Roll Number: </span>{{ user.roll_number }}</p>
+            <p><span>Contact: </span>{{ user.contact_number }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="info-card gradient-primary">
+        <h3>
+          <i class="fa-solid fa-bolt"></i>
+          Quick Actions
+        </h3>
+      
+        {% if user.role == 'Instructor' %}
+          <a href="{{ url_for('examBp.create_exam_ui') }}"
+             class="action-btn primary">
+            <i class="fa-solid fa-plus"></i>
+            Create New Exam
+          </a>
+      
+          <a href="/instructor/grading"
+             class="action-btn secondary">
+            <i class="fa-solid fa-pen-to-square"></i>
+            Manual Grading
+          </a>
+        {% else %}
+          <a href="{{ url_for('take_examBp.exam_search') }}"
+             class="action-btn primary">
+            <i class="fa-solid fa-play"></i>
+            Take Exam
+          </a>
+      
+          <a href="{{ url_for('exam_view.list_results') }}"
+             class="action-btn secondary">
+            <i class="fa-solid fa-chart-bar"></i>
+            View Results
+          </a>
+        {% endif %}
+      </div>
+      
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

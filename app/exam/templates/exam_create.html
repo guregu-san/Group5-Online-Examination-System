@@ -1,50 +1,95 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
 {% block title %}Create Exam{% endblock %}
 
 {% block main_content %}
+
 <div class="card-container">
-  <div class="card-custom">
+  <div class="card wide">
 
-    <h2 class="text-center mb-4">Create a New Exam</h2>
+    <h1>Create New Exam</h1>
+    <p class="text-muted">
+      Fill in the details below to set up your exam.
+    </p>
 
-    <form method="POST">
+    <hr>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="">
       {{ form.hidden_tag() }}
 
-      <div class="mb-3">
-        {{ form.course_code.label }}
-        {{ form.course_code(class="form-control") }}
-      </div>
+      <!-- BASIC INFO -->
+      <h3>Basic Information</h3>
 
-      <div class="mb-3">
-        {{ form.instructor_email.label }}
-        {{ form.instructor_email(class="form-control") }}
-      </div>
-
-      <div class="mb-3">
+      <div class="form-group">
         {{ form.title.label }}
-        {{ form.title(class="form-control") }}
+        {{ form.title(class="form-control", placeholder="e.g. Midterm Exam") }}
       </div>
 
-      <div class="mb-3">
-        {{ form.opens_at.label }}
-        {{ form.opens_at(class="form-control") }}
+      <div class="form-group">
+        {{ form.course_code.label }}
+        {{ form.course_code(class="form-control", placeholder="e.g. CSC101") }}
       </div>
 
-      <div class="mb-3">
-        {{ form.closes_at.label }}
-        {{ form.closes_at(class="form-control") }}
+      <div class="form-group">
+        {{ form.instructor_email.label }}
+        {{ form.instructor_email(class="form-control", placeholder="Instructor email") }}
       </div>
 
-      <div style="display:none;">
-        {{ form.security_settings(class="form-control") }}
+      <hr>
+
+      <!-- AVAILABILITY -->
+      <h3>Availability</h3>
+
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:220px;">
+          <label>Opens At</label>
+          <input type="datetime-local"
+                 name="opens_at"
+                 class="form-control"
+                 required>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:220px;">
+          <label>Closes At</label>
+          <input type="datetime-local"
+                 name="closes_at"
+                 class="form-control"
+                 required>
+        </div>
       </div>
 
-      <div class="text-center mt-4">
-        {{ form.submit(class="btn btn-primary px-4") }}
+      <!-- hidden security field (unchanged) -->
+      {{ form.security_settings(type="hidden") }}
+
+      <hr>
+
+      <!-- ACTION -->
+      <div style="margin-top:30px;">
+        <button type="submit" class="btn btn-primary btn-lg">
+          Create Exam
+        </button>
+
+        <a href="{{ url_for('dashboard') }}"
+           class="btn btn-default btn-lg"
+           style="margin-left:10px;">
+          Cancel
+        </a>
       </div>
 
     </form>
 
   </div>
 </div>
+
 {% endblock %}
