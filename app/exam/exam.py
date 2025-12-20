@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from datetime import datetime
+from flask_login import login_required
 
 from flask import (
     Blueprint,
@@ -157,6 +158,7 @@ def _create_exam_in_db(course_code, instructor_email, title, opens_at, closes_at
 # Create Exam (UI)
 # -----------------------------
 @examBp.route("/create", methods=["GET", "POST"])
+@login_required
 def create_exam_ui():
     form = ExamCreateForm()
 
@@ -196,6 +198,7 @@ def create_exam_ui():
 # Add Question UI
 # -----------------------------
 @examBp.route("/<int:exam_id>/questions/new", methods=["GET", "POST"])
+@login_required
 def add_question_ui(exam_id):
 
     if request.method == "POST":
@@ -321,6 +324,7 @@ def add_question_ui(exam_id):
 # Preview Exam
 # -----------------------------
 @examBp.route("/<int:exam_id>/preview", methods=["GET"])
+@login_required
 def preview_exam_ui(exam_id):
     conn = get_db()
     cur = conn.cursor()
@@ -354,6 +358,7 @@ def preview_exam_ui(exam_id):
 # JSON API CREATE EXAM
 # -----------------------------
 @examBp.route("", methods=["POST"])
+@login_required
 def create_exam():
     data = request.get_json(silent=True) or {}
 
@@ -376,6 +381,7 @@ def create_exam():
 # LIST EXAMS BY INSTRUCTOR
 # -----------------------------
 @examBp.route("/instructor/<path:email>", methods=["GET"])
+@login_required
 def list_exams_by_instructor(email):
     conn = get_db()
     cur = conn.cursor()
@@ -397,6 +403,7 @@ def list_exams_by_instructor(email):
 # EDIT EXAM UI
 # -----------------------------
 @examBp.route("/<int:exam_id>/edit", methods=["GET"])
+@login_required
 def edit_exam_ui(exam_id):
 
     conn = get_db()
@@ -431,6 +438,7 @@ def edit_exam_ui(exam_id):
 # SECURITY UI
 # -----------------------------
 @examBp.route("/<int:exam_id>/security", methods=["GET", "POST"])
+@login_required
 def set_security_ui(exam_id):
 
     conn = get_db()
@@ -484,6 +492,7 @@ def set_security_ui(exam_id):
 # AVAILABILITY UI
 # -----------------------------
 @examBp.route("/<int:exam_id>/availability", methods=["GET", "POST"])
+@login_required
 def set_availability_ui(exam_id):
 
     conn = get_db()
@@ -535,6 +544,7 @@ def set_availability_ui(exam_id):
 # REORDER QUESTIONS (Drag & Drop)
 # -----------------------------
 @examBp.route("/<int:exam_id>/reorder", methods=["POST"])
+@login_required
 def reorder_questions(exam_id):
     data = request.get_json(silent=True) or {}
     order_list = data.get("order", [])
@@ -566,6 +576,7 @@ def reorder_questions(exam_id):
 # EDIT QUESTION
 # -----------------------------
 @examBp.route("/questions/<int:question_id>/edit_ui", methods=["GET", "POST"])
+@login_required
 def edit_question_ui(question_id):
 
     conn = get_db()
@@ -632,6 +643,7 @@ def edit_question_ui(question_id):
 # DELETE QUESTION
 # -----------------------------
 @examBp.route("/questions/<int:question_id>/delete", methods=["POST"])
+@login_required
 def delete_question_ui(question_id):
 
     conn = get_db()
