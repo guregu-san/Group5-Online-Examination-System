@@ -24,7 +24,7 @@ app = Flask(__name__)
 
 # Flask configuration
 app.config['SECRET_KEY'] = 'dupa123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../oesDB.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Mailtrap configuration

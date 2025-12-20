@@ -313,7 +313,7 @@ def start():
     )
 
 
-##### User-Innacessible Endpoint #####
+########## User-Innacessible Endpoint ##########
 @take_examBp.route("/autosave", methods=["POST"])
 @login_required
 def autosave():
