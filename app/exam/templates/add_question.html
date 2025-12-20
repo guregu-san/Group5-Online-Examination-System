@@ -9,8 +9,9 @@
 
     <form method="POST">
 
+      <!-- Question Type -->
       <label>Question Type</label>
-      <select name="question_type" id="question_type" class="form-control mb-3">
+      <select name="question_type" id="question_type" class="form-control mb-3" required>
         <option value="">Choose Type</option>
         <option value="mcq">Multiple Choice</option>
         <option value="true_false">True/False</option>
@@ -19,16 +20,23 @@
         <option value="essay">Essay</option>
       </select>
 
+      <!-- Question Text -->
       <label>Question Text</label>
-      <input type="text" name="question_text" class="form-control mb-3">
+      <input type="text" name="question_text" class="form-control mb-3" required>
 
       <!-- MCQ -->
       <div id="mcq_block" style="display:none;">
-        <h5>Options</h5>
+        <h5>Options <small class="text-muted">(Select the correct answer)</small></h5>
         {% for i in range(1,5) %}
         <div class="form-check mb-2">
-          <input type="checkbox" name="opt{{ i }}_correct" class="form-check-input">
-          <input type="text" name="opt{{ i }}" class="form-control mt-1" placeholder="Option {{ i }}">
+          <input type="radio"
+                 name="mcq_correct"
+                 value="{{ i }}"
+                 class="form-check-input">
+          <input type="text"
+                 name="opt{{ i }}"
+                 class="form-control mt-1"
+                 placeholder="Option {{ i }}">
         </div>
         {% endfor %}
       </div>
@@ -37,7 +45,7 @@
       <div id="tf_block" style="display:none;">
         <h5>Correct Answer</h5>
         <div class="form-check">
-          <input type="radio" name="tf_answer" value="true"> True
+          <input type="radio" name="tf_answer" value="true" required> True
         </div>
         <div class="form-check">
           <input type="radio" name="tf_answer" value="false"> False

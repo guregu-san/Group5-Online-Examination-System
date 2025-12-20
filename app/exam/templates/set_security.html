@@ -7,7 +7,7 @@
 
     <h3 class="text-center mb-3">Security Settings</h3>
 
-    {% set current = exam['security_settings'] | safe | loads %}
+    {% set current = exam.security_settings or [] %}
 
     <form method="POST">
 

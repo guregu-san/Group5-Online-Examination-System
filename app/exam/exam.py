@@ -207,26 +207,57 @@ def add_question_ui(exam_id):
             return redirect(request.url)
 
         options = []
+        is_multiple_correct = False
 
+        # ---------------- MCQ ----------------
         if q_type == "mcq":
             for i in range(1, 5):
                 text = request.form.get(f"opt{i}", "").strip()
                 if text:
                     is_correct = request.form.get(f"opt{i}_correct") == "on"
-                    options.append({"option_text": text, "is_correct": is_correct})
+                    options.append({
+                        "option_text": text,
+                        "is_correct": is_correct
+                    })
 
-            is_multiple_correct = any(opt["is_correct"] for opt in options)
+            if not options:
+                flash("At least one option is required.", "danger")
+                return redirect(request.url)
 
+            correct_count = sum(1 for opt in options if opt["is_correct"])
+
+            if correct_count == 0:
+                flash("You must select exactly ONE correct answer.", "danger")
+                return redirect(request.url)
+
+            if correct_count > 1:
+                flash("Only ONE correct answer is allowed for Multiple Choice questions.", "danger")
+                return redirect(request.url)
+
+            is_multiple_correct = False
+
+        # ---------------- TRUE / FALSE ----------------
         elif q_type == "true_false":
             correct = request.form.get("tf_answer")
+
+            if correct not in ["true", "false"]:
+                flash("You must select the correct answer.", "danger")
+                return redirect(request.url)
+
             options = [
                 {"option_text": "True", "is_correct": correct == "true"},
                 {"option_text": "False", "is_correct": correct == "false"},
             ]
             is_multiple_correct = False
 
+        # ---------------- TEXT ANSWERS ----------------
         elif q_type in ["short", "numerical", "essay"]:
             answer = request.form.get("text_answer", "").strip()
+
+            if not answer:
+                flash("Expected answer is required.", "danger")
+                return redirect(request.url)
+
             options = [{"option_text": answer, "is_correct": True}]
             is_multiple_correct = False
 
@@ -234,6 +265,7 @@ def add_question_ui(exam_id):
             flash("Invalid question type.", "danger")
             return redirect(request.url)
 
+        # ---------------- DB ----------------
         conn = get_db()
         cur = conn.cursor()
 
@@ -244,15 +276,25 @@ def add_question_ui(exam_id):
             flash("Exam not found.", "danger")
             return redirect(url_for("examBp.create_exam_ui"))
 
-        # Determine next order index
-        cur.execute("SELECT COALESCE(MAX(order_index), 0) FROM questions WHERE exam_id = ?", (exam_id,))
+        # Order index
+        cur.execute("""
+            SELECT COALESCE(MAX(order_index), 0)
+            FROM questions
+            WHERE exam_id = ?
+        """, (exam_id,))
         order_index = cur.fetchone()[0] + 1
 
         # Insert question
         cur.execute("""
             INSERT INTO questions (exam_id, question_text, is_multiple_correct, points, order_index)
             VALUES (?, ?, ?, ?, ?)
-        """, (exam_id, question_text, 1 if is_multiple_correct else 0, 1, order_index))
+        """, (
+            exam_id,
+            question_text,
+            1 if is_multiple_correct else 0,
+            1,
+            order_index
+        ))
 
         question_id = cur.lastrowid
 
@@ -261,7 +303,11 @@ def add_question_ui(exam_id):
             cur.execute("""
                 INSERT INTO options (question_id, option_text, is_correct)
                 VALUES (?, ?, ?)
-            """, (question_id, opt["option_text"], 1 if opt["is_correct"] else 0))
+            """, (
+                question_id,
+                opt["option_text"],
+                1 if opt["is_correct"] else 0
+            ))
 
         conn.commit()
         conn.close()
@@ -270,7 +316,6 @@ def add_question_ui(exam_id):
         return redirect(url_for("examBp.edit_exam_ui", exam_id=exam_id))
 
     return render_template("add_question.html", exam_id=exam_id)
-
 
 # -----------------------------
 # Preview Exam
@@ -415,17 +460,25 @@ def set_security_ui(exam_id):
         flash("Security updated!", "success")
         return redirect(url_for("examBp.edit_exam_ui", exam_id=exam_id))
 
+    # -------- GET REQUEST --------
     cur.execute("SELECT * FROM exams WHERE exam_id = ?", (exam_id,))
-    exam = cur.fetchone()
-
+    row = cur.fetchone()
     conn.close()
 
-    if not exam:
+    if not row:
         flash("Exam not found.", "danger")
         return redirect(url_for("examBp.create_exam_ui"))
 
-    return render_template("set_security.html", exam=exam, exam_id=exam_id)
+    # ALWAYS define exam
+    exam = dict(row)
 
+    # Safely parse JSON
+    try:
+        exam["security_settings"] = json.loads(exam["security_settings"] or "[]")
+    except json.JSONDecodeError:
+        exam["security_settings"] = []
+
+    return render_template("set_security.html", exam=exam, exam_id=exam_id)
 
 # -----------------------------
 # AVAILABILITY UI

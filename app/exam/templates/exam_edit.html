@@ -29,7 +29,6 @@
         <tr>
           <th>⇅</th>
           <th>Question</th>
-          <th>Type</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -38,13 +37,6 @@
         <tr draggable="true" data-id="{{ q['question_id'] }}">
           <td style="cursor: grab;">☰</td>
           <td>{{ q['question_text'] }}</td>
-          <td>
-            {% if q['is_multiple_correct'] %}
-              Multiple Correct
-            {% else %}
-              Single Correct
-            {% endif %}
-          </td>
           <td>
             <a class="btn btn-sm btn-light" href="{{ url_for('examBp.edit_question_ui', question_id=q['question_id']) }}">Edit</a>
 
