@@ -1,4 +1,53 @@
-# Online-Examination-System
+# Online Examination System (OES)
+
+A web-based Online Examination System built with Flask and SQLite.  
+The system supports exam creation, exam taking, automatic grading, manual grading, and result viewing for students and instructors.
+
+---
+
+## Features
+
+### Authentication
+- Student and Instructor registration
+- Email verification
+- Secure password hashing
+- Role-based access control
+
+### Exams (Instructor)
+- Create and manage exams
+- Configure availability windows
+- Add, edit, delete, and reorder questions
+- Preview exams before publishing
+
+### Exam Taking (Student)
+- Search exams by exam ID
+- Resume unfinished exams
+- Autosave during exams
+- Timer with automatic submission on expiration
+- Manual submit and save-and-exit support
+
+### Grading
+- Automatic grading for objective questions
+- Manual grading by instructors
+- Partial credit support
+- Submission locking to prevent concurrent grading
+- Audit logging for grading actions
+
+### Results
+- View completed and graded exams
+- Per-question breakdown of answers and scores
+- Instructor feedback visibility
+- Client-side filtering by course code
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Python 3.10+
+
+---
+
 ## Application Download
 ### Method A – Using Git
 ```
@@ -63,4 +112,6 @@ cloudflared tunnel --url http://localhost:5001
 deactivate
 ```
 
-### Note: All test user passwords are "dupa12345"
+### Note:
+## Test users: 
+## All test user passwords are "dupa12345"
