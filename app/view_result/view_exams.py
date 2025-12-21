@@ -3,37 +3,46 @@ import json
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import current_user, login_required
 
+# Database connection helper
 def get_db():
+    """Connect to database with Row factory for dict-like access."""
     conn = sqlite3.connect("oesDB.db")
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
+# Convert database row to dictionary
 def row_to_dict(row):
+    """Convert SQLite Row object to dictionary."""
     return {k: row[k] for k in row.keys()}
 
 exam_viewBp = Blueprint('exam_view', __name__, template_folder='templates')
 
+# View list of exam results
 @exam_viewBp.route('/results', methods=['GET'])
 @login_required
 def list_results():
+    """Display exam results for students (only reviewed) or instructors (all submissions)."""
+    
+    # Get search filters from query parameters
     roll_number = request.args.get('roll_number')
     course_code = request.args.get('course_code')
     instructor_name = request.args.get('instructor')
     student_name = request.args.get('student_name')
     student_roll = request.args.get('student_roll')
 
+    # For students, use their roll number
     if current_user.is_authenticated and getattr(current_user, "role", None) == "Student":
         roll_number = getattr(current_user, "roll_number", roll_number)
 
-    if not roll_number and not (
-        current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor"
-    ):
+    # Validate required parameters
+    if not roll_number and not (current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor"):
         return "roll_number query parameter is required", 400
 
     conn = get_db()
     cur = conn.cursor()
 
+    # Base query to get submissions with related data
     base_select = """
         SELECT
             s.submission_id, s.exam_id, s.total_score, s.status, s.submitted_at,
@@ -50,10 +59,13 @@ def list_results():
 
     params = []
 
+    # Build query based on user role
     if current_user.is_authenticated and getattr(current_user, "role", None) == "Instructor":
+        # Instructors see all submissions for their exams
         query = base_select + " WHERE e.instructor_email = ? AND s.status IN ('SUBMITTED', 'GRADED', 'IN_REVIEW', 'REVIEWED')"
         params = [current_user.email]
         
+        # Apply optional filters
         if course_code:
             query += " AND e.course_code LIKE ?"
             params.append(f"%{course_code}%")
@@ -64,6 +76,7 @@ def list_results():
             query += " AND st.name LIKE ?"
             params.append(f"%{student_name}%")
     else:
+        # Students only see their reviewed results
         if not roll_number:
             roll_number = getattr(current_user, "roll_number", None)
         if not roll_number:
@@ -72,6 +85,7 @@ def list_results():
         query = base_select + " WHERE s.roll_number = ? AND s.status = 'REVIEWED'"
         params = [roll_number]
         
+        # Apply optional filters
         if course_code:
             query += " AND e.course_code LIKE ?"
             params.append(f"%{course_code}%")
@@ -81,6 +95,7 @@ def list_results():
 
     query += " ORDER BY s.submitted_at DESC"
     
+    # Execute query and get results
     cur.execute(query, params)
     results = [row_to_dict(r) for r in cur.fetchall()]
     conn.close()
@@ -94,8 +109,10 @@ def list_results():
         current_user=current_user
     )
 
+# API endpoint for exam results
 @exam_viewBp.route('/api/results', methods=['GET'])
 def api_list_results():
+    """API endpoint to get exam results as JSON."""
     roll_number = request.args.get('roll_number')
     if not roll_number:
         return jsonify(error="roll_number required"), 400
@@ -124,16 +141,18 @@ def api_list_results():
     return jsonify([row_to_dict(r) for r in rows])
 
 
-# U6-F2: View single exam result (grade + answers)
+# View detailed exam result with questions and answers
 @exam_viewBp.route('/results/<int:submission_id>', methods=['GET'])
 @login_required
 def view_result_detail(submission_id):
+    """Display detailed exam result showing questions, answers, and scores."""
+    
     roll_number = request.args.get('roll_number') 
 
     conn = get_db()
     cur = conn.cursor()
 
-    # fetch submission + check ownership
+    # Get submission details
     cur.execute("""
         SELECT s.*, e.title, e.course_code, e.instructor_email, e.exam_id
         FROM submissions s
@@ -146,10 +165,10 @@ def view_result_detail(submission_id):
         conn.close()
         return "Submission not found", 404
 
-    # Security checks based on user role
+    # Verify user has permission to view this result
     if current_user.is_authenticated:
         if getattr(current_user, "role", None) == "Student":
-            # Students can only view their own reviewed results
+            # Students: can only view their own reviewed results
             if sub["roll_number"] != current_user.roll_number:
                 conn.close()
                 return "Not allowed to view this result", 403
@@ -157,16 +176,14 @@ def view_result_detail(submission_id):
                 conn.close()
                 return "This exam has not been reviewed yet", 403
         elif getattr(current_user, "role", None) == "Instructor":
-            # Instructors can view results for exams they own
+            # Instructors: can view results for their exams
             if sub["instructor_email"] != current_user.email:
                 conn.close()
                 return "Not allowed to view this result", 403
         else:
-            # Unknown role
             conn.close()
             return "Not allowed to view this result", 403
     else:
-        # Not authenticated
         conn.close()
         return "Not allowed to view this result", 403
 
@@ -177,6 +194,7 @@ def view_result_detail(submission_id):
     answers_json = sub["answers"] or "{}"
     answers = json.loads(answers_json)
 
+    # Parse answers format (can be dict or list)
     is_answers_map = isinstance(answers, dict)
     answers_by_q = {}
     if not is_answers_map and isinstance(answers, list):
@@ -187,6 +205,7 @@ def view_result_detail(submission_id):
                 continue
             answers_by_q[qid] = a
 
+    # Show message if exam not graded yet
     if status not in ("GRADED", "REVIEWED"):
         conn.close()
         return render_template(
@@ -197,6 +216,7 @@ def view_result_detail(submission_id):
             total_score=None
         )
 
+    # Get questions and options for this exam
     cur.execute("""
         SELECT q.question_id, q.question_text, q.points, q.is_multiple_correct,
                o.option_id, o.option_text, o.is_correct
@@ -208,7 +228,7 @@ def view_result_detail(submission_id):
     rows = cur.fetchall()
     conn.close()
 
-    # build structure
+    # Build questions data structure
     questions = {}
     for r in rows:
         qid = r["question_id"]
@@ -227,18 +247,17 @@ def view_result_detail(submission_id):
                 "is_correct": bool(r["is_correct"])
             })
 
-    # highlight selected answers
+    # Mark which options the student selected
     for qid, qdata in questions.items():
+        # Get selected option IDs from answers
         if is_answers_map:
             selected_ids = answers.get(str(qid), [])
         else:
-            # try to find selected IDs in the structured answers (if present)
             entry = answers_by_q.get(qid)
-            # possible keys: 'selected', 'selected_option_ids', 'answer' or nothing
             if entry is None:
                 selected_ids = []
             else:
-                # common shapes: list of ints, single int, or comma-separated string
+                # Handle different answer formats
                 if isinstance(entry.get('selected_option_ids'), list):
                     selected_ids = entry.get('selected_option_ids')
                 elif isinstance(entry.get('selected'), list):
@@ -248,19 +267,20 @@ def view_result_detail(submission_id):
                 elif isinstance(entry.get('answer'), int):
                     selected_ids = [entry.get('answer')]
                 else:
-                    # fallback: student answer text not useful for MCQ selection
                     selected_ids = []
+        
         if isinstance(selected_ids, int):
             selected_ids = [selected_ids]
         selected_ids = set(map(int, selected_ids)) if selected_ids else set()
 
+        # Mark selected options in data
         for opt in qdata["options"]:
             opt["selected_by_student"] = opt["option_id"] in selected_ids
 
-        # determine earned points
-        # If manual grading data exists for this question, prefer final_points/manual_points/auto_points
+        # Calculate earned points for this question
         entry = answers_by_q.get(qid) if not is_answers_map else None
         if entry is not None:
+            # Use manually graded points if available
             final_p = entry.get('final_points')
             manual_p = entry.get('manual_points')
             auto_p = entry.get('auto_points')
@@ -271,21 +291,21 @@ def view_result_detail(submission_id):
             elif auto_p is not None:
                 qdata['earned_points'] = float(auto_p)
             else:
-                # fallback to auto evaluation from selected ids when possible
+                # Auto-grade: full points if all correct answers selected
                 correct_ids = {o['option_id'] for o in qdata['options'] if o.get('is_correct')}
                 if correct_ids and selected_ids == correct_ids:
                     qdata['earned_points'] = qdata['points']
                 else:
                     qdata['earned_points'] = 0
         else:
-            # no manual grading data, compute auto-earned by exact-match of selected ids
+            # No grading data, compute automatically
             correct_ids = {o['option_id'] for o in qdata['options'] if o.get('is_correct')}
             if correct_ids and selected_ids == correct_ids:
                 qdata['earned_points'] = qdata['points']
             else:
                 qdata['earned_points'] = 0
 
-    # compute total possible points for the exam
+    # Calculate total possible points
     total_possible = sum(q['points'] for q in questions.values())
 
     exam_info = {
@@ -303,7 +323,3 @@ def view_result_detail(submission_id):
         feedback=feedback,
         message=None
     )
-
-
-# register blueprint on app --- was causing issues to run project ---
-#app.register_blueprint(exam_viewBp)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Exam Result{% endblock %}
+{% block title %}Exam Result Details{% endblock %}
 
 {% block main_content %}
 <style>
@@ -8,6 +8,7 @@
         max-width: 100% !important;
     }
     
+    /* Question card styling */
     .question-card {
         border-radius: 8px;
         transition: all 0.2s ease;
@@ -19,6 +20,7 @@
         transform: translateY(-1px);
     }
     
+    /* Option styling */
     .option-item {
         border-radius: 8px;
         padding: 1rem 1.25rem;
@@ -33,6 +35,7 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     
+    /* Color coding for answer correctness */
     .option-selected-correct {
         background-color: #d4edda;
         border-color: #28a745;
@@ -49,12 +52,14 @@
         border-style: dashed;
     }
     
+    /* Score display */
     .score-display {
         font-size: 3rem;
         font-weight: 700;
         line-height: 1.2;
     }
     
+    /* Progress bar */
     .progress-modern {
         height: 32px;
         border-radius: 8px;
@@ -73,7 +78,7 @@
 </style>
 
 {% if message %}
-    <!-- Error/Warning Message -->
+    <!-- Display message when exam is not ready for viewing -->
     <div class="card result-details-card shadow-sm">
         <div class="card-body text-center py-5">
             <div class="mb-4">
@@ -94,7 +99,7 @@
         </div>
     </div>
 {% else %}
-    <!-- Header -->
+    <!-- Page Header: Exam title and back button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-2">
@@ -115,14 +120,16 @@
         </div>
     </div>
     
-    <!-- Score Summary -->
+    <!-- Score Summary Card -->
     <div class="row g-4 mb-4">
+        <!-- Total Score Display -->
         <div class="col-lg-{% if feedback %}7{% else %}12{% endif %}">
             <div class="card result-details-card shadow-sm">
                 <div class="card-body text-center py-4">
                     <p class="text-uppercase text-muted small fw-bold mb-3" style="letter-spacing: 1px;">
                         Total Score
                     </p>
+                    <!-- Score Numbers -->
                     <div class="score-display mb-3">
                         {% set total_possible = total_possible if total_possible is defined else 0 %}
                         {% if total_score is not none %}
@@ -132,6 +139,7 @@
                             <span class="text-muted">- / {{ total_possible }}</span>
                         {% endif %}
                     </div>
+                    <!-- Progress Bar and Performance Badge -->
                     {% if total_score is not none and total_possible > 0 %}
                         {% set percentage = (total_score / total_possible * 100)|round(1) %}
                         <div class="progress progress-modern mt-4">
@@ -144,6 +152,7 @@
                                 {{ percentage }}%
                             </div>
                         </div>
+                        <!-- Performance Badge -->
                         <div class="mt-3">
                             {% if percentage >= 70 %}
                                 <span class="badge bg-success">
@@ -163,6 +172,7 @@
                 </div>
             </div>
         </div>
+        <!-- Instructor Feedback Card (if feedback exists) -->
         {% if feedback %}
         <div class="col-lg-5">
             <div class="card result-details-card shadow-sm border-warning border-2 h-100">
@@ -177,7 +187,7 @@
         {% endif %}
     </div>
 
-    <!-- Questions Section -->
+    <!-- Questions & Answers Section -->
     <div class="card result-details-card shadow-sm">
         <div class="card-header bg-dark text-white py-3">
             <h4 class="mb-0">
@@ -185,8 +195,10 @@
             </h4>
         </div>
         <div class="card-body p-4">
+            <!-- Loop through each question -->
             {% for q in questions %}
             <div class="card question-card result-details-card shadow-sm">
+                <!-- Question Header: number and points earned -->
                 <div class="card-header bg-light d-flex justify-content-between align-items-center py-3 px-4">
                     <h5 class="mb-0 fw-bold">Question {{ loop.index }}</h5>
                     <span class="badge {% if q.earned_points == q.points %}bg-success{% elif q.earned_points > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-2">
@@ -194,15 +206,18 @@
                         {{ q.earned_points }} / {{ q.points }} points
                     </span>
                 </div>
+                <!-- Question Body: text and options -->
                 <div class="card-body p-4">
                     <p class="fw-semibold mb-4" style="font-size: 1.1rem; line-height: 1.6;">
                         {{ q.question_text }}
                     </p>
+                    <!-- Answer Options -->
                     <div>
                         {% for opt in q.options %}
                         <div class="option-item {% if opt.selected_by_student and opt.is_correct %}option-selected-correct{% elif opt.selected_by_student and not opt.is_correct %}option-selected-incorrect{% elif opt.is_correct %}option-correct-not-selected{% endif %}">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center flex-grow-1">
+                                    <!-- Show icon if student selected this option -->
                                     {% if opt.selected_by_student %}
                                         <i class="glyphicon glyphicon-{% if opt.is_correct %}ok{% else %}remove{% endif %}-circle me-3 {% if opt.is_correct %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.25rem;"></i>
                                     {% endif %}
@@ -210,6 +225,7 @@
                                         {{ opt.option_text }}
                                     </span>
                                 </div>
+                                <!-- Show correct badge -->
                                 {% if opt.is_correct %}
                                     <span class="badge bg-success ms-3">
                                         <i class="glyphicon glyphicon-ok me-1"></i> Correct
@@ -225,7 +241,7 @@
         </div>
     </div>
 
-    <!-- Back Button Footer -->
+    <!-- Footer: Back to Results button -->
     <div class="text-center my-4">
         {% if current_user.role == 'Instructor' %}
             <a href="/results" class="btn btn-lg btn-secondary px-5">
@@ -239,4 +255,3 @@
     </div>
 {% endif %}
 {% endblock %}
-
