@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Review Submission{% endblock %}
 
 {% block main_content %}
@@ -7,7 +6,6 @@
   <div class="card wide" id="submission-root" data-submission-id="{{ submission_id }}">
     <h1 style="margin-bottom:10px;">Manual Grading – Submission #{{ submission_id }}</h1>
 
-    <!-- Instructor email -->
     <div class="filter-box" style="padding:16px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:15px;">
       <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
         <div style="flex:1; min-width:220px;">
@@ -30,19 +28,15 @@
       </div>
     </div>
 
-    <!-- Error + loading -->
     <div id="errorBox" class="alert alert-danger d-none"></div>
     <p id="loadingText" class="mt-2">Loading submission...</p>
 
-    <!-- Meta info -->
     <div id="submissionMeta" class="mt-3 d-none">
       <p id="submissionMetaLine1" style="margin-bottom:4px;"></p>
       <p id="submissionMetaLine2" style="margin-bottom:0;"></p>
     </div>
 
-    <!-- Main grading layout -->
     <div class="mt-4" style="display:flex; gap:18px; flex-wrap:wrap;">
-      <!-- Left: question list -->
       <div style="flex:0 0 260px; max-width:260px;">
         <h5 style="margin-bottom:10px;">Questions</h5>
         <ul id="questionList" class="list-group">
@@ -52,7 +46,6 @@
         </ul>
       </div>
 
-      <!-- Right: selected question detail -->
       <div style="flex:1; min-width:260px;">
         <h5 style="margin-bottom:10px;">Question Details</h5>
         <div id="questionDetail" class="question-box">
@@ -61,7 +54,6 @@
       </div>
     </div>
 
-    <!-- Overall feedback -->
     <div class="mt-4">
       <h5>Overall Feedback</h5>
       <textarea id="overallFeedback"
@@ -74,452 +66,392 @@
       </button>
     </div>
 
-    <!-- Actions -->
     <div class="mt-4" style="display:flex; flex-wrap:wrap; gap:10px;">
-      <button id="recalcBtn" class="btn btn-secondary">
-        Recalculate Total
-      </button>
-      <button id="saveBtn" class="btn btn-primary">
-        Save &amp; Mark as GRADED
-      </button>
-      <button id="cancelBtn" class="btn btn-outline-danger">
-        Cancel Review
-      </button>
-      <a id="backLink"
-         href="#"
-         class="btn btn-link">
-        ← Back to submissions list
-      </a>
+      <button id="recalcBtn" class="btn btn-secondary">Recalculate Total</button>
+      <button id="saveBtn" class="btn btn-primary">Save &amp; Mark as GRADED</button>
+      <button id="cancelBtn" class="btn btn-outline-danger">Cancel Review</button>
+      <a id="backLink" href="#" class="btn btn-link">← Back to submissions list</a>
     </div>
   </div>
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const root = document.getElementById("submission-root");
-    const submissionId = root.dataset.submissionId;
+document.addEventListener("DOMContentLoaded", function () {
+  const root = document.getElementById("submission-root");
+  const submissionId = root.dataset.submissionId;
 
-    const instructorEmailInput = document.getElementById("instructorEmail");
-    const reloadWithEmailBtn = document.getElementById("reloadWithEmailBtn");
-    const errorBox = document.getElementById("errorBox");
-    const loadingText = document.getElementById("loadingText");
-    const submissionMeta = document.getElementById("submissionMeta");
-    const metaLine1 = document.getElementById("submissionMetaLine1");
-    const metaLine2 = document.getElementById("submissionMetaLine2");
-    const questionList = document.getElementById("questionList");
-    const questionDetail = document.getElementById("questionDetail");
-    const overallFeedbackTextarea = document.getElementById("overallFeedback");
-    const saveOverallFeedbackBtn = document.getElementById("saveOverallFeedbackBtn");
-    const recalcBtn = document.getElementById("recalcBtn");
-    const saveBtn = document.getElementById("saveBtn");
-    const cancelBtn = document.getElementById("cancelBtn");
-    const backLink = document.getElementById("backLink");
+  const instructorEmailInput = document.getElementById("instructorEmail");
+  const reloadWithEmailBtn = document.getElementById("reloadWithEmailBtn");
+  const errorBox = document.getElementById("errorBox");
+  const loadingText = document.getElementById("loadingText");
+  const submissionMeta = document.getElementById("submissionMeta");
+  const metaLine1 = document.getElementById("submissionMetaLine1");
+  const metaLine2 = document.getElementById("submissionMetaLine2");
+  const questionList = document.getElementById("questionList");
+  const questionDetail = document.getElementById("questionDetail");
+  const overallFeedbackTextarea = document.getElementById("overallFeedback");
+  const saveOverallFeedbackBtn = document.getElementById("saveOverallFeedbackBtn");
+  const recalcBtn = document.getElementById("recalcBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const backLink = document.getElementById("backLink");
 
-    let submission = null;
-    let answers = [];
-    let totalScore = null;
-    let selectedQuestionId = null;
+  let submission = null;
+  let answers = [];
+  let totalScore = null;
+  let selectedQuestionId = null;
 
-    function showError(message) {
-      if (!message) {
-        errorBox.classList.add("d-none");
-        errorBox.textContent = "";
-        return;
-      }
-      errorBox.textContent = message;
-      errorBox.classList.remove("d-none");
+  function showError(message) {
+    if (!message) {
+      errorBox.classList.add("d-none");
+      errorBox.textContent = "";
+      return;
+    }
+    errorBox.textContent = message;
+    errorBox.classList.remove("d-none");
+  }
+
+  function setLoading(isLoading) {
+    loadingText.style.display = isLoading ? "block" : "none";
+  }
+
+  function displayStatus(dbStatus) {
+    // DB uses REVIEWED; UI should show GRADED
+    if (dbStatus === "REVIEWED") return "GRADED";
+    return dbStatus || "";
+  }
+
+  function renderMeta() {
+    if (!submission) return;
+    submissionMeta.classList.remove("d-none");
+
+    const score = (totalScore ?? submission.total_score ?? 0);
+
+    metaLine1.innerHTML =
+      "<strong>Exam:</strong> " +
+      (submission.title || "(unknown)") +
+      " — " +
+      (submission.course_code || "") +
+      " | <strong>Roll:</strong> " +
+      (submission.roll_number || "");
+
+    metaLine2.innerHTML =
+      "<strong>Status:</strong> " +
+      displayStatus(submission.status) +
+      " | <strong>Total Score:</strong> " +
+      score;
+
+    backLink.href = "/instructor/grading/exams/" + submission.exam_id + "/submissions";
+  }
+
+  function renderQuestionList() {
+    questionList.innerHTML = "";
+    if (!answers || answers.length === 0) {
+      questionList.innerHTML =
+        '<li class="list-group-item text-center text-muted">No answers stored.</li>';
+      return;
     }
 
-    function setLoading(isLoading) {
-      loadingText.style.display = isLoading ? "block" : "none";
-    }
+    answers.forEach(function (ans, index) {
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.style.cursor = "pointer";
 
-    function renderMeta() {
-      if (!submission) return;
-      submissionMeta.classList.remove("d-none");
+      if (ans.question_id === selectedQuestionId) li.classList.add("active");
 
-      const score = totalScore != null ? totalScore : submission.total_score;
-      metaLine1.innerHTML =
-        "<strong>Exam:</strong> " +
-        (submission.title || "(unknown)") +
-        " — " +
-        (submission.course_code || "") +
-        " | <strong>Roll:</strong> " +
-        (submission.roll_number || "");
+      const label = "Question " + (index + 1) + " (ID " + ans.question_id + ")";
+      const points = (ans.final_points ?? ans.manual_points ?? ans.auto_points ?? 0);
 
-      metaLine2.innerHTML =
-        "<strong>Status:</strong> " +
-        submission.status +
-        " | <strong>Total Score:</strong> " +
-        (score != null ? score : 0);
-
-      backLink.href =
-        "/instructor/grading/exams/" + submission.exam_id + "/submissions";
-    }
-
-    function renderQuestionList() {
-      questionList.innerHTML = "";
-      if (!answers || answers.length === 0) {
-        questionList.innerHTML =
-          '<li class="list-group-item text-center text-muted">No answers stored.</li>';
-        return;
-      }
-
-      answers.forEach(function (ans, index) {
-        const li = document.createElement("li");
-        li.className = "list-group-item";
-        li.style.cursor = "pointer";
-
-        if (ans.question_id === selectedQuestionId) {
-          li.classList.add("active");
-        }
-
-        const label = "Question " + (index + 1) + " (ID " + ans.question_id + ")";
-        const points = ans.final_points ?? ans.manual_points ?? ans.auto_points ?? 0;
-
-        li.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>${label}</div>
-            <span class="badge bg-secondary">${points}</span>
-          </div>
-        `;
-
-        li.addEventListener("click", function () {
-          selectedQuestionId = ans.question_id;
-          renderQuestionList();
-          renderQuestionDetail();
-        });
-
-        questionList.appendChild(li);
-      });
-    }
-
-    function renderQuestionDetail() {
-      const ans = answers.find(a => a.question_id === selectedQuestionId);
-      if (!ans) {
-        questionDetail.innerHTML =
-          '<p class="text-muted mb-0">Select a question on the left to start grading.</p>';
-        return;
-      }
-
-      const autoP = ans.auto_points ?? 0;
-      const manualP = ans.manual_points ?? 0;
-      const finalP = ans.final_points ?? 0;
-      const maxP = ans.max_points ?? "";
-
-      const feedbackHtml = ans.feedback
-        ? `<div class="mt-2">
-             <strong>Existing feedback:</strong>
-             <pre class="mb-0 small">${ans.feedback}</pre>
-           </div>`
-        : "";
-
-      questionDetail.innerHTML = `
-        <h5>Question #${ans.question_id}</h5>
-        <p style="white-space:pre-wrap; margin-top:8px;">
-          <strong>Student's Answer:</strong><br>
-          ${ans.answer_text || "(no stored text)"}
-        </p>
-        <p class="small text-muted mb-1">
-          Auto: ${autoP} |
-          Manual: ${manualP} |
-          Final: ${finalP}${
-            maxP !== "" ? " / " + maxP : ""
-          }
-        </p>
-
-        <div class="mt-3" style="display:flex; flex-wrap:wrap; gap:8px;">
-          <button class="btn btn-success btn-sm" id="btnMarkCorrect">
-            Mark Correct
-          </button>
-          <button class="btn btn-outline-danger btn-sm" id="btnMarkWrong">
-            Mark Wrong
-          </button>
-          <button class="btn btn-outline-primary btn-sm" id="btnPartialPoints">
-            Set Partial Points
-          </button>
+      li.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>${label}</div>
+          <span class="badge bg-secondary">${points}</span>
         </div>
-
-        <div class="mt-3">
-          <label class="form-label"><strong>Add Feedback for this Question</strong></label>
-          <textarea id="questionFeedbackInput"
-                    class="form-control"
-                    rows="2"
-                    placeholder="Comment specific to this question"></textarea>
-          <button class="btn btn-outline-secondary btn-sm mt-2" id="btnSaveQuestionFeedback">
-            Add Question Feedback
-          </button>
-        </div>
-
-        ${feedbackHtml}
       `;
 
-      document.getElementById("btnMarkCorrect")
-        .addEventListener("click", function () {
-          handleToggleVerdict(selectedQuestionId, true);
-        });
+      li.addEventListener("click", function () {
+        selectedQuestionId = ans.question_id;
+        renderQuestionList();
+        renderQuestionDetail();
+      });
 
-      document.getElementById("btnMarkWrong")
-        .addEventListener("click", function () {
-          handleToggleVerdict(selectedQuestionId, false);
-        });
+      questionList.appendChild(li);
+    });
+  }
 
-      document.getElementById("btnPartialPoints")
-        .addEventListener("click", function () {
-          const current =
-            ans.manual_points ??
-            ans.final_points ??
-            ans.auto_points ??
-            0;
-          handlePartialPoints(selectedQuestionId, current);
-        });
-
-      document.getElementById("btnSaveQuestionFeedback")
-        .addEventListener("click", function () {
-          const text = document.getElementById("questionFeedbackInput").value.trim();
-          if (!text) {
-            alert("Feedback is empty");
-            return;
-          }
-          handleQuestionFeedback(selectedQuestionId, text);
-        });
-    }
-
-    async function openSubmission() {
-      showError("");
-      setLoading(true);
-      submissionMeta.classList.add("d-none");
-      questionList.innerHTML = "";
+  function renderQuestionDetail() {
+    const ans = answers.find(a => a.question_id === selectedQuestionId);
+    if (!ans) {
       questionDetail.innerHTML =
-        '<p class="text-muted mb-0">Loading submission...</p>';
-
-      const email = instructorEmailInput.value.trim() || "teacher@uni.com";
-
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/open`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ instructor_email: email })
-          }
-        );
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Failed to open submission for review");
-        }
-
-        const data = await res.json();
-        submission = data;
-        answers = data.answers || [];
-        totalScore = data.total_score || data.totalScore || null;
-        overallFeedbackTextarea.value = data.feedback || "";
-        selectedQuestionId = answers.length ? answers[0].question_id : null;
-
-        renderMeta();
-        renderQuestionList();
-        renderQuestionDetail();
-      } catch (err) {
-        console.error(err);
-        showError(err.message || "Failed to open submission for review");
-      } finally {
-        setLoading(false);
-      }
+        '<p class="text-muted mb-0">Select a question on the left to start grading.</p>';
+      return;
     }
 
-    async function handleToggleVerdict(questionId, forceCorrect) {
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/answers/${questionId}/toggle-verdict`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ force_correct: forceCorrect })
-          }
-        );
-        if (!res.ok) throw new Error("Failed to toggle verdict");
-        const data = await res.json();
-        const updatedFinal = data.final_points;
-        const updatedTotal = data.total_score;
+    const autoP = (ans.auto_points ?? 0);
+    const manualP = (ans.manual_points ?? 0);
+    const finalP = (ans.final_points ?? 0);
+    const maxP = (ans.max_points ?? "");
 
-        answers = answers.map(function (a) {
-          if (a.question_id === questionId) {
-            return {
-              ...a,
-              manual_points: updatedFinal,
-              final_points: updatedFinal
-            };
-          }
-          return a;
-        });
+    const feedbackHtml = ans.feedback
+      ? `<div class="mt-2">
+           <strong>Existing feedback:</strong>
+           <pre class="mb-0 small">${ans.feedback}</pre>
+         </div>`
+      : "";
 
-        totalScore = updatedTotal;
-        renderMeta();
-        renderQuestionList();
-        renderQuestionDetail();
-      } catch (err) {
-        console.error(err);
-        alert("Failed to toggle verdict");
-      }
+    questionDetail.innerHTML = `
+      <h5>Question #${ans.question_id}</h5>
+      <p style="white-space:pre-wrap; margin-top:8px;">
+        <strong>Student's Answer:</strong><br>
+        ${ans.answer_text || "(no stored text)"}
+      </p>
+      <p class="small text-muted mb-1">
+        Auto: ${autoP} |
+        Manual: ${manualP} |
+        Final: ${finalP}${maxP !== "" ? " / " + maxP : ""}
+      </p>
+
+      <div class="mt-3" style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn btn-success btn-sm" id="btnMarkCorrect">Mark Correct</button>
+        <button class="btn btn-outline-danger btn-sm" id="btnMarkWrong">Mark Wrong</button>
+        <button class="btn btn-outline-primary btn-sm" id="btnPartialPoints">Set Partial Points</button>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label"><strong>Add Feedback for this Question</strong></label>
+        <textarea id="questionFeedbackInput"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Comment specific to this question"></textarea>
+        <button class="btn btn-outline-secondary btn-sm mt-2" id="btnSaveQuestionFeedback">
+          Add Question Feedback
+        </button>
+      </div>
+
+      ${feedbackHtml}
+    `;
+
+    document.getElementById("btnMarkCorrect").addEventListener("click", function () {
+      handleToggleVerdict(selectedQuestionId, true);
+    });
+
+    document.getElementById("btnMarkWrong").addEventListener("click", function () {
+      handleToggleVerdict(selectedQuestionId, false);
+    });
+
+    document.getElementById("btnPartialPoints").addEventListener("click", function () {
+      const current = (ans.manual_points ?? ans.final_points ?? ans.auto_points ?? 0);
+      handlePartialPoints(selectedQuestionId, current);
+    });
+
+    document.getElementById("btnSaveQuestionFeedback").addEventListener("click", function () {
+      const text = document.getElementById("questionFeedbackInput").value.trim();
+      if (!text) return alert("Feedback is empty");
+      handleQuestionFeedback(selectedQuestionId, text);
+    });
+  }
+
+  async function readError(res) {
+    try {
+      const data = await res.json();
+      return data.error || data.message || JSON.stringify(data);
+    } catch {
+      return "Request failed";
     }
+  }
 
-    async function handlePartialPoints(questionId, currentPoints) {
-      const input = window.prompt(
-        "Enter manual points:",
-        currentPoints != null ? currentPoints : 0
+  async function openSubmission() {
+    showError("");
+    setLoading(true);
+    submissionMeta.classList.add("d-none");
+    questionList.innerHTML = "";
+    questionDetail.innerHTML = '<p class="text-muted mb-0">Loading submission...</p>';
+
+    const email = instructorEmailInput.value.trim() || "teacher@uni.com";
+
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/open`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructor_email: email })
+      });
+
+      if (!res.ok) throw new Error(await readError(res));
+
+      const data = await res.json();
+      submission = data;
+      answers = data.answers || [];
+      totalScore = (data.total_score ?? data.totalScore ?? null);
+      overallFeedbackTextarea.value = (data.feedback ?? "");
+      selectedQuestionId = answers.length ? answers[0].question_id : null;
+
+      renderMeta();
+      renderQuestionList();
+      renderQuestionDetail();
+    } catch (err) {
+      console.error(err);
+      showError(err.message || "Failed to open submission for review");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleToggleVerdict(questionId, forceCorrect) {
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/answers/${questionId}/toggle-verdict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force_correct: forceCorrect })
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+
+      const updatedFinal = data.final_points;
+      const updatedTotal = data.total_score;
+
+      answers = answers.map(a => a.question_id === questionId
+        ? { ...a, manual_points: updatedFinal, final_points: updatedFinal }
+        : a
       );
-      if (input === null) return;
 
-      const value = parseFloat(input);
-      if (Number.isNaN(value)) {
-        alert("Invalid number");
-        return;
-      }
-
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/answers/${questionId}/manual-points`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ points: value })
-          }
-        );
-        if (!res.ok) throw new Error("Failed to set manual points");
-        const data = await res.json();
-        const updatedTotal = data.total_score;
-
-        answers = answers.map(function (a) {
-          if (a.question_id === questionId) {
-            return { ...a, manual_points: value, final_points: value };
-          }
-          return a;
-        });
-
-        totalScore = updatedTotal;
-        renderMeta();
-        renderQuestionList();
-        renderQuestionDetail();
-      } catch (err) {
-        console.error(err);
-        alert("Failed to set manual points");
-      }
+      totalScore = updatedTotal;
+      renderMeta();
+      renderQuestionList();
+      renderQuestionDetail();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to toggle verdict");
     }
+  }
 
-    async function handleQuestionFeedback(questionId, text) {
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/feedback`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ comment: text, question_id: questionId })
-          }
-        );
-        if (!res.ok) throw new Error("Failed to add question feedback");
+  async function handlePartialPoints(questionId, currentPoints) {
+    const input = window.prompt("Enter manual points:", (currentPoints ?? 0));
+    if (input === null) return;
 
-        answers = answers.map(function (a) {
-          if (a.question_id === questionId) {
-            return {
-              ...a,
-              feedback: a.feedback ? a.feedback + "\n" + text : text
-            };
-          }
-          return a;
-        });
+    const value = parseFloat(input);
+    if (Number.isNaN(value)) return alert("Invalid number");
 
-        renderQuestionDetail();
-      } catch (err) {
-        console.error(err);
-        alert("Failed to add question feedback");
-      }
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/answers/${questionId}/manual-points`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points: value })
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+
+      answers = answers.map(a => a.question_id === questionId
+        ? { ...a, manual_points: value, final_points: value }
+        : a
+      );
+
+      totalScore = data.total_score;
+      renderMeta();
+      renderQuestionList();
+      renderQuestionDetail();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to set manual points");
     }
+  }
 
-    async function handleOverallFeedbackSave() {
-      const text = overallFeedbackTextarea.value.trim();
-      if (!text) {
-        alert("Feedback is empty");
-        return;
-      }
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/feedback`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ comment: text })
-          }
-        );
-        if (!res.ok) throw new Error("Failed to save overall feedback");
-        alert("Overall feedback saved");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to save overall feedback");
-      }
+  async function handleQuestionFeedback(questionId, text) {
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: text, question_id: questionId })
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      await res.json();
+
+      answers = answers.map(a => a.question_id === questionId
+        ? { ...a, feedback: a.feedback ? (a.feedback + "\n" + text) : text }
+        : a
+      );
+
+      renderQuestionDetail();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to add question feedback");
     }
+  }
 
-    async function handleRecalc() {
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/recalc`,
-          { method: "POST" }
-        );
-        if (!res.ok) throw new Error("Failed to recalculate");
-        const data = await res.json();
-        totalScore = data.total_score;
-        renderMeta();
-      } catch (err) {
-        console.error(err);
-        alert("Failed to recalculate");
-      }
+  async function handleOverallFeedbackSave() {
+    const text = overallFeedbackTextarea.value.trim();
+    if (!text) return alert("Feedback is empty");
+
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: text })
+      });
+      if (!res.ok) throw new Error(await readError(res));
+
+      const data = await res.json();
+      overallFeedbackTextarea.value = (data.feedback ?? text);
+      submission.feedback = (data.feedback ?? text);
+
+      alert("Overall feedback saved");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to save overall feedback");
     }
+  }
 
-    async function handleSave() {
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/save`,
-          { method: "POST" }
-        );
-        if (!res.ok) throw new Error("Failed to save grading");
-        const data = await res.json();
-        totalScore = data.total_score;
-        submission.status = "GRADED";
-        renderMeta();
-        alert("Submission graded and saved");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to save grading");
-      }
+  async function handleRecalc() {
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/recalc`, { method: "POST" });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+      totalScore = data.total_score;
+      renderMeta();
+      alert("Total recalculated");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to recalculate");
     }
+  }
 
-    async function handleCancel() {
-      if (!window.confirm("Cancel review and revert status?")) return;
-      try {
-        const res = await fetch(
-          `/grading/submissions/${submissionId}/cancel`,
-          { method: "POST" }
-        );
-        if (!res.ok) throw new Error("Failed to cancel review");
-        const data = await res.json();
-        submission.status = data.status;
-        renderMeta();
-        alert("Review canceled");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to cancel review");
-      }
+  async function handleSave() {
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/save`, { method: "POST" });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+
+      totalScore = data.total_score;
+      submission.status = data.status || "REVIEWED"; // DB status
+      renderMeta();
+      alert("Saved (Marked as GRADED)");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to save grading");
     }
+  }
 
-    // Button handlers
-    reloadWithEmailBtn.addEventListener("click", openSubmission);
-    saveOverallFeedbackBtn.addEventListener("click", handleOverallFeedbackSave);
-    recalcBtn.addEventListener("click", handleRecalc);
-    saveBtn.addEventListener("click", handleSave);
-    cancelBtn.addEventListener("click", handleCancel);
+  async function handleCancel() {
+    if (!window.confirm("Cancel review and revert status?")) return;
+    try {
+      const res = await fetch(`/grading/submissions/${submissionId}/cancel`, { method: "POST" });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+      submission.status = data.status;
+      renderMeta();
+      alert("Review canceled");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to cancel review");
+    }
+  }
 
-    // Initial load
-    openSubmission();
-  });
+  reloadWithEmailBtn.addEventListener("click", openSubmission);
+  saveOverallFeedbackBtn.addEventListener("click", handleOverallFeedbackSave);
+  recalcBtn.addEventListener("click", handleRecalc);
+  saveBtn.addEventListener("click", handleSave);
+  cancelBtn.addEventListener("click", handleCancel);
+
+  openSubmission();
+});
 </script>
 {% endblock %}
