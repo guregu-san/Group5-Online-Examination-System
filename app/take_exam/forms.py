@@ -17,7 +17,7 @@ from app.models import Exams
 
 
 class ExamSearchForm(FlaskForm):
-    examID = StringField(validators=[InputRequired(), Length(min=1, max=16)], render_kw={"placeholder": "Enter exam ID"})
+    examID = StringField(validators=[InputRequired(), Length(min=1, max=18)], render_kw={"placeholder": "Enter exam ID"})
     submit = SubmitField('Search')
 
     def validate_examID(self, examID):
