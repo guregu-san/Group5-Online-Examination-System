@@ -3,22 +3,17 @@ import json
 import os
 from flask import Blueprint, request, jsonify
 
-
-# Blueprint
 manualGradingBp = Blueprint(
     "manualGradingBp",
     __name__,
     url_prefix="/grading",
-   template_folder="templates",
-
+    template_folder="templates",
 )
 
 
 def get_db():
-
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     db_path = os.path.join(base_dir, "oesDB.db")
-
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
@@ -29,55 +24,37 @@ def row_to_dict(row):
     return {k: row[k] for k in row.keys()}
 
 
-
-# Helpers for working with submissions.answers JSON
-#       "question_id": 1,
-#       "answer_text": "some text",
-#       "auto_points": 0,
-#       "manual_points": null,
-#       "final_points": 0,
-#       "max_points": 2,
-#       "feedback": ""
+# submissions.answers JSON helpers
 def load_answers_from_row(row):
     raw = row["answers"]
     if not raw:
         return []
-
     try:
         data = json.loads(raw)
     except Exception:
-      
         return []
 
     if isinstance(data, list):
         return data
-    if isinstance(data, dict) and "questions" in data and isinstance(
-        data["questions"], list
-    ):
+    if isinstance(data, dict) and "questions" in data and isinstance(data["questions"], list):
         return data["questions"]
     return []
 
 
 def save_answers(conn, submission_id, answers):
-    """Save answers list back into submissions.answers as JSON string."""
     raw = json.dumps(answers)
     cur = conn.cursor()
     cur.execute(
-        "UPDATE submissions SET answers = ?, updated_at = CURRENT_TIMESTAMP "
-        "WHERE submission_id = ?",
+        "UPDATE submissions SET answers = ?, updated_at = CURRENT_TIMESTAMP WHERE submission_id = ?",
         (raw, submission_id),
     )
 
 
 def recalc_total_score(conn, submission_id, answers=None):
-    """Recalculate submissions.total_score from answers.final_points."""
     cur = conn.cursor()
-   # If caller didn't pass answers, load them from DB
+
     if answers is None:
-        cur.execute(
-            "SELECT answers FROM submissions WHERE submission_id = ?",
-            (submission_id,),
-        )
+        cur.execute("SELECT answers FROM submissions WHERE submission_id = ?", (submission_id,))
         row = cur.fetchone()
         if not row:
             return None
@@ -85,18 +62,16 @@ def recalc_total_score(conn, submission_id, answers=None):
             answers = json.loads(row["answers"]) if row["answers"] else []
         except Exception:
             answers = []
- # If answers is wrapped, unwrap
 
     if isinstance(answers, dict) and "questions" in answers:
         answers_list = answers["questions"]
     else:
         answers_list = answers
-# Sum final points for all answers
+
     total = 0.0
     for ans in answers_list:
         final_p = ans.get("final_points")
         if final_p is None:
-            # if final not set, fall back to manual or auto
             manual_p = ans.get("manual_points")
             auto_p = ans.get("auto_points")
             if manual_p is not None:
@@ -106,20 +81,15 @@ def recalc_total_score(conn, submission_id, answers=None):
             else:
                 final_p = 0.0
         total += float(final_p)
-# Store total score in the submissions table
+
     cur.execute(
-        "UPDATE submissions SET total_score = ?, updated_at = CURRENT_TIMESTAMP "
-        "WHERE submission_id = ?",
+        "UPDATE submissions SET total_score = ?, updated_at = CURRENT_TIMESTAMP WHERE submission_id = ?",
         (total, submission_id),
     )
     return total
 
 
 def find_answer_entry(answers, question_id):
-    """
-    Find the dict in 'answers' list for a given question_id.
-    If not found, return None.
-    """
     for ans in answers:
         if ans.get("question_id") == question_id:
             return ans
@@ -128,10 +98,7 @@ def find_answer_entry(answers, question_id):
 
 def get_question_max_points(conn, question_id):
     cur = conn.cursor()
-    cur.execute(
-        "SELECT points FROM questions WHERE question_id = ?",
-        (question_id,),
-    )
+    cur.execute("SELECT points FROM questions WHERE question_id = ?", (question_id,))
     row = cur.fetchone()
     if not row:
         return None
@@ -144,7 +111,6 @@ def load_manual_grading_dashboard(instructor_email):
     conn = get_db()
     cur = conn.cursor()
 
-    # Get exams for this instructor with submission counts by status
     cur.execute(
         """
         SELECT
@@ -153,7 +119,7 @@ def load_manual_grading_dashboard(instructor_email):
             e.course_code,
             COUNT(s.submission_id) AS total_submissions,
             SUM(CASE WHEN s.status = 'IN_REVIEW' THEN 1 ELSE 0 END) AS in_review,
-            SUM(CASE WHEN s.status = 'GRADED' THEN 1 ELSE 0 END) AS graded
+            SUM(CASE WHEN s.status = 'REVIEWED' THEN 1 ELSE 0 END) AS reviewed
         FROM exams e
         LEFT JOIN submissions s ON s.exam_id = e.exam_id
         WHERE e.instructor_email = ?
@@ -174,7 +140,7 @@ def load_manual_grading_dashboard(instructor_email):
                 "course_code": r["course_code"],
                 "total_submissions": r["total_submissions"],
                 "in_review": r["in_review"],
-                "graded": r["graded"],
+                "reviewed": r["reviewed"],
             }
         )
 
@@ -184,8 +150,11 @@ def load_manual_grading_dashboard(instructor_email):
 # U4-F2: List Submissions for Selected Exam
 @manualGradingBp.route("/exams/<int:exam_id>/submissions", methods=["GET"])
 def list_submissions(exam_id):
-    # Optional query parameter: ?status=SUBMITTED / IN_REVIEW / GRADED
     status_filter = request.args.get("status")
+
+    # If UI ever sends "GRADED", map it to DB status "REVIEWED"
+    if status_filter == "GRADED":
+        status_filter = "REVIEWED"
 
     conn = get_db()
     cur = conn.cursor()
@@ -233,8 +202,6 @@ def list_submissions(exam_id):
 
 
 # U4-F3: Open a Submission for Review
-#   Checks if this instructor owns the exam, switches status to IN_REVIEW
-#   and returns full submission data and answers.
 @manualGradingBp.route("/submissions/<int:submission_id>/open", methods=["POST"])
 def open_submission_for_review(submission_id):
     data = request.get_json(silent=True) or {}
@@ -246,7 +213,6 @@ def open_submission_for_review(submission_id):
     conn = get_db()
     cur = conn.cursor()
 
-    # Load submission + exam to verify ownership
     cur.execute(
         """
         SELECT s.*, e.title, e.course_code, e.instructor_email
@@ -260,12 +226,12 @@ def open_submission_for_review(submission_id):
     if not row:
         conn.close()
         return jsonify(error="Submission not found"), 404
-  # Security check: only the exam's instructor can open it
+
     if row["instructor_email"] != instructor_email:
         conn.close()
         return jsonify(error="You are not allowed to review this exam"), 403
 
-    # Mark as IN_REVIEW if currently SUBMITTED
+    # Move SUBMITTED -> IN_REVIEW only
     if row["status"] == "SUBMITTED":
         cur.execute(
             """
@@ -278,7 +244,6 @@ def open_submission_for_review(submission_id):
         )
         conn.commit()
 
-      # Reload row so status is up to date in response
         cur.execute(
             """
             SELECT s.*, e.title, e.course_code, e.instructor_email
@@ -298,8 +263,7 @@ def open_submission_for_review(submission_id):
     return jsonify(submission_info), 200
 
 
-# U4-F4: Toggle Correct/Wrong (boolean override)
-# Sets manual_points to full marks or 0 and updates final_points + total score.
+# U4-F4: Toggle Correct/Wrong
 @manualGradingBp.route(
     "/submissions/<int:submission_id>/answers/<int:question_id>/toggle-verdict",
     methods=["POST"],
@@ -312,10 +276,7 @@ def toggle_verdict(submission_id, question_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute(
-        "SELECT * FROM submissions WHERE submission_id = ?",
-        (submission_id,),
-    )
+    cur.execute("SELECT * FROM submissions WHERE submission_id = ?", (submission_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -323,25 +284,19 @@ def toggle_verdict(submission_id, question_id):
 
     answers = load_answers_from_row(row)
     ans = find_answer_entry(answers, question_id)
-    
+
     if ans is None:
-        # create minimal entry if missing
         ans = {"question_id": question_id, "answer_text": "", "auto_points": 0}
         answers.append(ans)
- # If max_points is not provided by the frontend, look it up in DB
+
     if max_points is None:
         max_points = get_question_max_points(conn, question_id)
     if max_points is None:
         max_points = 0
- # If Correct → give full points; if Wrong → 0
-    if force_correct:
-        ans["manual_points"] = float(max_points)
-    else:
-        ans["manual_points"] = 0.0
 
+    ans["manual_points"] = float(max_points) if force_correct else 0.0
     ans["final_points"] = ans["manual_points"]
-  
-    # Save back and recalculate
+
     save_answers(conn, submission_id, answers)
     total = recalc_total_score(conn, submission_id, answers)
 
@@ -358,7 +313,6 @@ def toggle_verdict(submission_id, question_id):
 
 
 # U4-F5: Set Partial Credit
-# Allows the instructor to manually assign any value between 0 and max_points.
 @manualGradingBp.route(
     "/submissions/<int:submission_id>/answers/<int:question_id>/manual-points",
     methods=["POST"],
@@ -373,23 +327,20 @@ def set_manual_points(submission_id, question_id):
     except (TypeError, ValueError):
         return jsonify(error="points must be a number"), 400
 
-    max_points = data.get("max_points")
     conn = get_db()
     cur = conn.cursor()
-# If max_points omitted, get it from the questions table
+
+    max_points = data.get("max_points")
     if max_points is None:
         max_points = get_question_max_points(conn, question_id)
-    if max_points is None:
-        max_points = points  # fallback
 
-    if points < 0 or points > float(max_points):
-        conn.close()
-        return jsonify(error="points must be between 0 and max_points"), 400
+    # If still None, allow it, but don’t block save
+    if max_points is not None:
+        if points < 0 or points > float(max_points):
+            conn.close()
+            return jsonify(error="points must be between 0 and max_points"), 400
 
-    cur.execute(
-        "SELECT * FROM submissions WHERE submission_id = ?",
-        (submission_id,),
-    )
+    cur.execute("SELECT * FROM submissions WHERE submission_id = ?", (submission_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -400,7 +351,7 @@ def set_manual_points(submission_id, question_id):
     if ans is None:
         ans = {"question_id": question_id, "answer_text": "", "auto_points": 0}
         answers.append(ans)
-# Store manual and final points
+
     ans["manual_points"] = points
     ans["final_points"] = points
 
@@ -414,82 +365,68 @@ def set_manual_points(submission_id, question_id):
         {
             "question_id": question_id,
             "manual_points": points,
+            "final_points": points,
             "total_score": total,
         }
     ), 200
 
 
-# U4-F6: Add Feedback
-# Stores overall feedback in submissions.feedback (text).
-@manualGradingBp.route(
-    "/submissions/<int:submission_id>/feedback",
-    methods=["POST"],
-)
+# U4-F6: Add Feedback (overall REPLACE, per-question APPEND)
+@manualGradingBp.route("/submissions/<int:submission_id>/feedback", methods=["POST"])
 def add_feedback(submission_id):
     data = request.get_json(silent=True) or {}
     comment = (data.get("comment") or "").strip()
     question_id = data.get("question_id")
 
-    if not comment:
+    if comment == "":
         return jsonify(error="comment is required"), 400
 
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute(
-        "SELECT * FROM submissions WHERE submission_id = ?",
-        (submission_id,),
-    )
+    cur.execute("SELECT * FROM submissions WHERE submission_id = ?", (submission_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
         return jsonify(error="Submission not found"), 404
 
-    # overall feedback in column
-    existing_feedback = row["feedback"] or ""
-    if existing_feedback:
-        new_feedback = existing_feedback + "\n" + comment
-    else:
+    existing_feedback = (row["feedback"] or "").strip()
+
+    # OVERALL feedback
+    if question_id is None:
+        # REPLACE overall feedback
         new_feedback = comment
+    else:
+        # APPEND to overall feedback
+        new_feedback = (existing_feedback + "\n" + comment).strip() if existing_feedback else comment
 
     cur.execute(
-        """
-        UPDATE submissions
-        SET feedback = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE submission_id = ?
-        """,
+        "UPDATE submissions SET feedback = ?, updated_at = CURRENT_TIMESTAMP WHERE submission_id = ?",
         (new_feedback, submission_id),
     )
 
-    # optional per-question feedback stored inside answers JSON
+    # Per-question feedback inside answers JSON
     if question_id is not None:
+        qid = int(question_id)
         answers = load_answers_from_row(row)
-        ans = find_answer_entry(answers, int(question_id))
+        ans = find_answer_entry(answers, qid)
         if ans is None:
-            ans = {"question_id": int(question_id), "answer_text": "", "auto_points": 0}
+            ans = {"question_id": qid, "answer_text": "", "auto_points": 0}
             answers.append(ans)
-        # append comment
-        existing_q_fb = ans.get("feedback") or ""
-        if existing_q_fb:
-            ans["feedback"] = existing_q_fb + "\n" + comment
-        else:
-            ans["feedback"] = comment
+
+        existing_q_fb = (ans.get("feedback") or "").strip()
+        ans["feedback"] = (existing_q_fb + "\n" + comment).strip() if existing_q_fb else comment
 
         save_answers(conn, submission_id, answers)
 
     conn.commit()
     conn.close()
 
-    return jsonify(message="Feedback added"), 201
+    return jsonify(message="Feedback saved", feedback=new_feedback), 201
 
 
 # U4-F7: Recalculate Submission Score
-#  Just recomputes total_score from answers.final_points.
-#  Useful when frontend has changed several answers.
-@manualGradingBp.route(
-    "/submissions/<int:submission_id>/recalc",
-    methods=["POST"],
-)
+@manualGradingBp.route("/submissions/<int:submission_id>/recalc", methods=["POST"])
 def recalc_submission_totals(submission_id):
     conn = get_db()
     total = recalc_total_score(conn, submission_id)
@@ -503,23 +440,21 @@ def recalc_submission_totals(submission_id):
 
 
 # U4-F8: Save Changes / Finalize Review
-# Recalculates total score one last time
-# Sets status = 'GRADED'
-
-@manualGradingBp.route(
-    "/submissions/<int:submission_id>/save",
-    methods=["POST"],
-)
+# IMPORTANT: DB allows REVIEWED (NOT GRADED)
+@manualGradingBp.route("/submissions/<int:submission_id>/save", methods=["POST"])
 def save_submission_review(submission_id):
     conn = get_db()
     cur = conn.cursor()
 
     total = recalc_total_score(conn, submission_id)
+    if total is None:
+        conn.close()
+        return jsonify(error="Submission not found"), 404
 
     cur.execute(
         """
         UPDATE submissions
-        SET status = 'GRADED',
+        SET status = 'REVIEWED',
             updated_at = CURRENT_TIMESTAMP
         WHERE submission_id = ?
         """,
@@ -529,27 +464,22 @@ def save_submission_review(submission_id):
     conn.commit()
     conn.close()
 
-    if total is None:
-        return jsonify(error="Submission not found"), 404
-
-    return jsonify(message="Submission graded", total_score=total), 200
+    # We return both DB status + a display status for frontend
+    return jsonify(
+        message="Submission saved",
+        total_score=total,
+        status="REVIEWED",
+        status_display="GRADED",
+    ), 200
 
 
 # U4-F9: Cancel Review
-# If the submission was IN_REVIEW → revert back to SUBMITTED.
-# Used when instructor presses "Cancel" and discards changes
-@manualGradingBp.route(
-    "/submissions/<int:submission_id>/cancel",
-    methods=["POST"],
-)
+@manualGradingBp.route("/submissions/<int:submission_id>/cancel", methods=["POST"])
 def cancel_submission_review(submission_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute(
-        "SELECT status FROM submissions WHERE submission_id = ?",
-        (submission_id,),
-    )
+    cur.execute("SELECT status FROM submissions WHERE submission_id = ?", (submission_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -560,11 +490,7 @@ def cancel_submission_review(submission_id):
         new_status = "SUBMITTED"
 
     cur.execute(
-        """
-        UPDATE submissions
-        SET status = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE submission_id = ?
-        """,
+        "UPDATE submissions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE submission_id = ?",
         (new_status, submission_id),
     )
 
@@ -574,22 +500,13 @@ def cancel_submission_review(submission_id):
     return jsonify(message="Review canceled", status=new_status), 200
 
 
-# U4-F10: Verify Submission Integrity (IT tool)
-# Ensures each answer has final_points set (fills from manual or auto).
-# Recalculates total_score.
-# Returns whether any answers were fixed.
-@manualGradingBp.route(
-    "/admin/submissions/<int:submission_id>/verify-integrity",
-    methods=["POST"],
-)
+# U4-F10: Verify Submission Integrity
+@manualGradingBp.route("/admin/submissions/<int:submission_id>/verify-integrity", methods=["POST"])
 def verify_submission_integrity(submission_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute(
-        "SELECT * FROM submissions WHERE submission_id = ?",
-        (submission_id,),
-    )
+    cur.execute("SELECT * FROM submissions WHERE submission_id = ?", (submission_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -597,7 +514,6 @@ def verify_submission_integrity(submission_id):
 
     answers = load_answers_from_row(row)
 
-    # fix missing final_points
     changed = False
     for ans in answers:
         if "final_points" not in ans or ans["final_points"] is None:
@@ -623,4 +539,3 @@ def verify_submission_integrity(submission_id):
         total_score=total,
         answers_fixed=changed,
     ), 200
-
